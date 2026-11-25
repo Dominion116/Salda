@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { container } from "@/components/layout/site";
 import { buttonClass } from "@/components/ui/button-class";
@@ -83,8 +84,11 @@ export function Hero() {
         <p className="max-w-[52ch] text-body-lg text-pretty text-ink">
           Salda looks at every debt in a group of businesses, cancels what it can, and moves only the difference.
         </p>
-        <div className="pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <ClearingLink />
+          <Link href="/app" className={buttonClass({ size: "xl" })}>
+            Open the app
+          </Link>
         </div>
       </div>
 

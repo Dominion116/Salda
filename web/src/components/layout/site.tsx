@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SaldaMark } from "@/components/brand";
+import { buttonClass } from "@/components/ui/button-class";
 import { Badge } from "@/components/ui/data";
 import { cx } from "@/lib/cx";
 import { MobileMenu } from "./mobile-menu";
@@ -39,7 +40,12 @@ function SiteHeader() {
           </ul>
         </nav>
         <div className="flex items-center gap-2 justify-self-end">
-          <Badge>Testnet</Badge>
+          <span className="max-sm:hidden">
+            <Badge>Testnet</Badge>
+          </span>
+          <Link href="/app" className={buttonClass()}>
+            Open the app
+          </Link>
           <MobileMenu links={siteLinks} />
         </div>
       </div>
@@ -72,6 +78,9 @@ function SiteFooter() {
         <nav aria-label="Project" className="md:col-span-3">
           <h2 className="pb-4 text-body-sm font-medium text-ink-strong">Project</h2>
           <ul className="flex flex-col gap-3 pointer-coarse:gap-5">
+            <li>
+              <Link href="/app" className={linkClass}>Open the app</Link>
+            </li>
             <li>
               <Link href="/design" className={linkClass}>Design system</Link>
             </li>
