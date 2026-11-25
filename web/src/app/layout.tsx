@@ -17,9 +17,18 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/*
+ * Turns landing page motion on before first paint, for viewers who allow motion. If the page's
+ * scripts have not started within 3.5 seconds, it turns motion off again so nothing stays hidden.
+ */
+const motionScript = `(function(){try{if(!matchMedia("(prefers-reduced-motion: no-preference)").matches)return;var d=document.documentElement;d.setAttribute("data-motion","");setTimeout(function(){if(!window.__saldaMotion)d.removeAttribute("data-motion")},3500)}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: motionScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

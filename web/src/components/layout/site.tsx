@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SaldaMark } from "@/components/brand";
+import { Reveal } from "@/components/motion/motion";
+import { Letters } from "@/components/motion/words";
 import { buttonClass } from "@/components/ui/button-class";
 import { Badge } from "@/components/ui/data";
 import { cx } from "@/lib/cx";
@@ -49,6 +51,7 @@ function SiteHeader() {
           <MobileMenu links={siteLinks} />
         </div>
       </div>
+      <span aria-hidden="true" className="scroll-progress" />
     </header>
   );
 }
@@ -97,9 +100,14 @@ function SiteFooter() {
         <p>Test tokens only. Nothing here is financial advice.</p>
         <a href="#main" className={linkClass}>Back to the top</a>
       </div>
-      <p aria-hidden="true" className="wordmark pointer-events-none -mb-[0.06em] text-center text-hairline select-none">
-        Salda
-      </p>
+      <Reveal
+        as="p"
+        variant="letters"
+        aria-hidden="true"
+        className="wordmark pointer-events-none -mb-[0.06em] text-center text-hairline select-none"
+      >
+        <Letters text="Salda" />
+      </Reveal>
     </footer>
   );
 }
@@ -109,7 +117,7 @@ function Rails() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden lg:block">
       <div className={cx(container, "h-full")}>
-        <div className="mx-auto h-full w-1/2 border-x border-hairline" />
+        <div className="rail mx-auto h-full w-1/2 border-x border-hairline" />
       </div>
     </div>
   );

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { Button } from "@/components/ui/button";
 import { Amount } from "@/components/ui/data";
 import { Field } from "@/components/ui/field";
+import { PlayIcon } from "@/components/ui/icons";
 import { Segmented } from "@/components/ui/selection";
 import { Slider } from "@/components/ui/slider";
 import { arrow, type Point } from "@/lib/arrow";
@@ -50,7 +52,75 @@ export function ClearingGraph() {
   const parsed = parseAmount(typed);
   const typedError = parsed === null || parsed > MAX_CASH ? "Enter an amount from 0 to 2." : undefined;
 
+  /*
+   * The story: once the drawing scrolls into view, switch to After and slide Ada’s cash from
+   * 0 to 2 while the debt thins. Any touch of the controls stops it for good.
+   */
+  const drawing = useRef<HTMLDivElement>(null);
+  const touched = useRef(false);
+  const story = useRef<{ timers: number[]; frame: number }>({ timers: [], frame: 0 });
+  const [playing, setPlaying] = useState(false);
+
+  const stopStory = useCallback(() => {
+    story.current.timers.forEach((timer) => window.clearTimeout(timer));
+    cancelAnimationFrame(story.current.frame);
+    story.current = { timers: [], frame: 0 };
+    setPlaying(false);
+  }, []);
+
+  const playStory = useCallback(() => {
+    stopStory();
+    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+      setView("After");
+      setCash(MAX_CASH);
+      setTyped(formatAmount(MAX_CASH));
+      return;
+    }
+    setPlaying(true);
+    setView("Before");
+    setCash(0n);
+    setTyped("0.00");
+    const later = (ms: number, run: () => void) => story.current.timers.push(window.setTimeout(run, ms));
+    later(700, () => setView("After"));
+    later(1500, () => {
+      const started = performance.now();
+      const step = (time: number) => {
+        const t = Math.min((time - started) / 2600, 1);
+        const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+        const next = (BigInt(Math.round((eased * 200) / 5) * 5) * ONE) / 100n;
+        setCash(next);
+        setTyped(formatAmount(next));
+        if (t < 1) story.current.frame = requestAnimationFrame(step);
+        else setPlaying(false);
+      };
+      story.current.frame = requestAnimationFrame(step);
+    });
+  }, [stopStory]);
+
+  useEffect(() => {
+    const node = drawing.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        if (!touched.current && window.matchMedia("(prefers-reduced-motion: no-preference)").matches) playStory();
+      },
+      { threshold: 0.6 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [playStory]);
+
+  useEffect(() => stopStory, [stopStory]);
+
+  const takeOver = () => {
+    touched.current = true;
+    if (story.current.timers.length > 0 || story.current.frame) stopStory();
+  };
+
   const choose = (next: bigint) => {
+    takeOver();
     setCash(next);
     setView("After");
   };
@@ -69,8 +139,8 @@ export function ClearingGraph() {
   return (
     <div>
       <div className="grid gap-8 lg:grid-cols-12 lg:gap-6">
-        <div className="lg:col-span-7">
-          <div aria-hidden="true" className="relative mx-auto w-full max-w-[720px]">
+        <div data-reveal-item className="lg:col-span-7">
+          <div ref={drawing} aria-hidden="true" className="relative mx-auto w-full max-w-[720px]">
             <svg viewBox={`0 0 ${SIZE.width} ${SIZE.height}`} className="block h-auto w-full" focusable="false">
               {result.debts.map((debt) => {
                 const left = toNumber(debt.owed) - toNumber(debt.cleared) * progress;
@@ -145,8 +215,16 @@ export function ClearingGraph() {
           </ul>
         </div>
 
-        <div className="flex flex-col gap-6 lg:col-span-4 lg:col-start-9 lg:justify-center">
-          <Segmented legend="Show" options={VIEWS} value={view} onValueChange={setView} />
+        <div data-reveal-item className="flex flex-col gap-6 lg:col-span-4 lg:col-start-9 lg:justify-center">
+          <Segmented
+            legend="Show"
+            options={VIEWS}
+            value={view}
+            onValueChange={(next) => {
+              takeOver();
+              setView(next);
+            }}
+          />
           <div className="flex flex-col gap-2">
             <p id={labelId} className="text-label text-ink-strong">
               Ada’s cash
@@ -184,12 +262,26 @@ export function ClearingGraph() {
               setTyped(text);
               const next = parseAmount(text);
               if (next !== null && next <= MAX_CASH) choose(next);
+              else takeOver();
             }}
           />
+          <div>
+            <Button
+              variant="ghost"
+              icon={<PlayIcon />}
+              disabled={playing}
+              onClick={() => {
+                touched.current = false;
+                playStory();
+              }}
+            >
+              {playing ? "Playing…" : "Play it again"}
+            </Button>
+          </div>
         </div>
       </div>
 
-      <dl className="mt-12 grid border-y border-hairline bg-canvas sm:grid-cols-3 sm:divide-x sm:divide-hairline max-sm:divide-y max-sm:divide-hairline">
+      <dl data-reveal-item className="mt-12 grid border-y border-hairline bg-canvas sm:grid-cols-3 sm:divide-x sm:divide-hairline max-sm:divide-y max-sm:divide-hairline">
         {[
           { label: "Debt cleared", value: cleared, of: result.totalOwed },
           { label: "Cash used", value: used },
@@ -207,7 +299,7 @@ export function ClearingGraph() {
         ))}
       </dl>
 
-      <div className="grid gap-8 pt-8 lg:grid-cols-12 lg:gap-6">
+      <div data-reveal-item className="grid gap-8 pt-8 lg:grid-cols-12 lg:gap-6">
         <div className="overflow-x-auto lg:col-span-7" tabIndex={0} role="region" aria-label="The same numbers as a table">
           <table className="w-full min-w-[480px] bg-canvas text-body-sm">
             <caption className="pb-3 text-start text-label text-ink-strong">
