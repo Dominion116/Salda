@@ -1,0 +1,149 @@
+/*
+ * The one interface every screen reads and writes through (PRD section 6).
+ * It mirrors the contract in PRD section 4. mockClient implements it with sample data;
+ * a live client replaces that without changing screens.
+ */
+
+export type Address = `0x${string}`;
+export type Hex = `0x${string}`;
+
+/** Amounts are tUSD8 base units (6 decimals). Times are Unix seconds. */
+export type Units = bigint;
+export type Seconds = number;
+
+/** A name is verified only when it matches the hash the circle admin attested. */
+export type AttestedName = { status: "verified"; value: string } | { status: "unverified" };
+
+export type Member = { address: Address; name: AttestedName; active: boolean; nameUpdatedAt: Seconds };
+export type Circle = { id: bigint; name: AttestedName; admin: Address; members: Member[] };
+
+export type Invoice = {
+  id: bigint;
+  circleId: bigint;
+  debtor: Address;
+  creditor: Address;
+  amount: Units;
+  cleared: Units;
+  dueDate: Seconds;
+  registeredAt: Seconds;
+  docHash: Hex;
+  voided: boolean;
+  /** Set when one side has signed to void it and the other has not yet. */
+  voidSignedBy: Address | null;
+};
+
+export type InvoiceDraft = Pick<Invoice, "circleId" | "debtor" | "creditor" | "amount" | "dueDate" | "docHash">;
+
+/** Signed by one side and waiting for the other. */
+export type PendingInvoice = InvoiceDraft & { key: string; signedBy: Address; deadline: Seconds };
+
+/** What a member is willing to spend in the next round. A planning input, never a binding limit. */
+export type CashLimit = { member: Address; amount: Units };
+
+export type Position = { member: Address; out: Units; in: Units };
+
+export type RoundPlan = {
+  circleId: bigint;
+  lines: { invoiceId: bigint; clear: Units }[];
+  positions: Position[];
+  gross: Units;
+  cash: Units;
+  deadline: Seconds;
+  /** False when the solver stopped early. The plan is still valid, but may not be the best. */
+  provenOptimal: boolean;
+};
+
+export type SubmissionState = "waiting-for-signatures" | "submitting" | "pending" | "confirmed" | "failed";
+
+export type Round = {
+  key: string;
+  plan: RoundPlan;
+  state: SubmissionState;
+  proposedAt: Seconds;
+  settledAt?: Seconds;
+  approvedBy: Address[];
+  /** The members in approvedBy whose mandate agreed for them. */
+  viaMandate: Address[];
+  /** Only a live client sets this. */
+  txHash?: Hex;
+  failure?: string;
+};
+
+export type MandateTerms = {
+  circleId: bigint;
+  member: Address;
+  agent: Address;
+  agentId: bigint;
+  maxNetDebitPerRound: Units;
+  totalCap: Units;
+  maxDueDays: number;
+  /** 30_000 means at least 3.0 cleared for every 1 paid. 0 turns the rule off. */
+  minClearRatioBps: number;
+  minCooldown: Seconds;
+  expiry: Seconds;
+};
+
+export type Mandate = MandateTerms & { hash: Hex; spent: Units; state: "active" | "revoked" | "expired" };
+
+export type AgentEvent = {
+  key: string;
+  at: Seconds;
+  circleId: bigint;
+  kind: "proposed" | "settled" | "rejected";
+  summary: string;
+};
+
+export type SaldaErrorCode =
+  | "not-found"
+  | "not-a-member"
+  | "invalid-amount"
+  | "already-voided"
+  | "already-signed"
+  | "nothing-to-clear"
+  | "mandate-already-active"
+  | "not-ready"
+  | "not-supported-in-sample";
+
+export class SaldaError extends Error {
+  readonly code: SaldaErrorCode;
+
+  constructor(code: SaldaErrorCode, message: string) {
+    super(message);
+    this.name = "SaldaError";
+    this.code = code;
+  }
+}
+
+export interface SaldaClient {
+  /** Screens show a Sample data label whenever this is "sample". */
+  readonly mode: "sample" | "live";
+
+  listCircles(): Promise<Circle[]>;
+  getCircle(id: bigint): Promise<Circle>;
+  createCircle(name: string, admin: Address, adminName: string): Promise<Circle>;
+  setMember(circleId: bigint, member: Address, active: boolean, name: string): Promise<Circle>;
+
+  listInvoices(circleId: bigint): Promise<Invoice[]>;
+  listPendingInvoices(circleId: bigint): Promise<PendingInvoice[]>;
+  proposeInvoice(draft: InvoiceDraft, signer: Address): Promise<PendingInvoice>;
+  cosignInvoice(key: string, signer: Address): Promise<Invoice>;
+  /** The first signature asks; the other side’s signature voids. */
+  signVoid(id: bigint, signer: Address): Promise<Invoice>;
+  payInvoice(id: bigint, amount: Units): Promise<Invoice>;
+
+  listCashLimits(circleId: bigint): Promise<CashLimit[]>;
+  setCashLimit(circleId: bigint, member: Address, amount: Units): Promise<CashLimit>;
+  planRound(circleId: bigint, cash: ReadonlyMap<Address, Units>): Promise<RoundPlan>;
+  getRound(key: string): Promise<Round>;
+  openRound(plan: RoundPlan): Promise<Round>;
+  approveRound(key: string, member: Address): Promise<Round>;
+  settleRound(key: string): Promise<Round>;
+  listRounds(circleId: bigint): Promise<Round[]>;
+
+  getMandate(member: Address): Promise<Mandate | null>;
+  activateMandate(terms: MandateTerms): Promise<Mandate>;
+  revokeMandate(member: Address): Promise<Mandate>;
+
+  listAgentEvents(circleId: bigint): Promise<AgentEvent[]>;
+  runAgent(circleId: bigint): Promise<AgentEvent>;
+}

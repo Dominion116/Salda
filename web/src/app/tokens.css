@@ -1,0 +1,171 @@
+/*
+ * Salda design tokens: the Core system, light theme.
+ * Components use these role names only. Raw color values live in this file and
+ * in src/design/tokens.ts, and `npm run check:tokens` keeps the two in step.
+ */
+@theme static {
+  /* Color: every token is a role, never a hue. */
+  --color-*: initial;
+  --color-canvas: #ffffff;
+  --color-surface: #fafafa;
+  --color-surface-2: #f4f4f5;
+  --color-hairline: #ebebeb;
+  --color-hairline-strong: #d4d4d8;
+  --color-ink-strong: #111111;
+  --color-ink: #333333;
+  --color-ink-subtle: #6b6b6b;
+  --color-primary: #0070e0;
+  --color-primary-hover: #005fc2;
+  --color-on-primary: #ffffff;
+  --color-link: #0070e0;
+  --color-inverse: #111111;
+  --color-inverse-hover: #2b2b2b;
+  --color-on-inverse: #ffffff;
+  --color-control-border: #8a8a8a;
+  --color-success: #15b042;
+  --color-success-fill: #caface;
+  --color-on-success: #0e7a2f;
+  --color-warning-fill: #fff1d6;
+  --color-on-warning: #8a4b00;
+  --color-danger: #d92d20;
+  --color-danger-fill: #ffe8e6;
+  --color-on-danger: #b42318;
+  --color-info-fill: #e6f0ff;
+  --color-on-info: #0058b0;
+
+  /* Type: 18 styles, two weights. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+
+  --text-*: initial;
+  --text-display-xl: 72px;
+  --text-display-xl--line-height: 72px;
+  --text-display-xl--letter-spacing: -0.04em;
+  --text-display-xl--font-weight: 500;
+  --text-display-lg: 56px;
+  --text-display-lg--line-height: 58px;
+  --text-display-lg--letter-spacing: -0.035em;
+  --text-display-lg--font-weight: 500;
+  --text-display-md: 44px;
+  --text-display-md--line-height: 46px;
+  --text-display-md--letter-spacing: -0.03em;
+  --text-display-md--font-weight: 500;
+  --text-headline: 32px;
+  --text-headline--line-height: 36px;
+  --text-headline--letter-spacing: -0.025em;
+  --text-headline--font-weight: 500;
+  --text-title-lg: 24px;
+  --text-title-lg--line-height: 30px;
+  --text-title-lg--letter-spacing: -0.02em;
+  --text-title-lg--font-weight: 500;
+  --text-title: 20px;
+  --text-title--line-height: 26px;
+  --text-title--letter-spacing: -0.015em;
+  --text-title--font-weight: 500;
+  --text-title-sm: 16px;
+  --text-title-sm--line-height: 20px;
+  --text-title-sm--letter-spacing: -0.01em;
+  --text-title-sm--font-weight: 500;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--letter-spacing: -0.01em;
+  --text-body-lg--font-weight: 400;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-body--letter-spacing: 0em;
+  --text-body--font-weight: 400;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--letter-spacing: 0em;
+  --text-body-sm--font-weight: 400;
+  --text-label: 13px;
+  --text-label--line-height: 16px;
+  --text-label--letter-spacing: 0em;
+  --text-label--font-weight: 500;
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--letter-spacing: 0em;
+  --text-label-sm--font-weight: 500;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--letter-spacing: 0em;
+  --text-caption--font-weight: 400;
+  --text-button: 13px;
+  --text-button--line-height: 16px;
+  --text-button--letter-spacing: 0em;
+  --text-button--font-weight: 500;
+  --text-button-lg: 15px;
+  --text-button-lg--line-height: 20px;
+  --text-button-lg--letter-spacing: -0.01em;
+  --text-button-lg--font-weight: 500;
+  --text-numeric: 32px;
+  --text-numeric--line-height: 36px;
+  --text-numeric--letter-spacing: -0.025em;
+  --text-numeric--font-weight: 500;
+  --text-mono: 12px;
+  --text-mono--line-height: 16px;
+  --text-mono--letter-spacing: 0em;
+  --text-mono--font-weight: 500;
+  --text-eyebrow: 11px;
+  --text-eyebrow--line-height: 14px;
+  --text-eyebrow--letter-spacing: 0.08em;
+  --text-eyebrow--font-weight: 500;
+
+  /* Space: numeric utilities step in 4px (p-4 is 16px). */
+  --spacing: 4px;
+
+  --container-*: initial;
+  --container-measure: 680px;
+  --container-page: 1280px;
+  --container-wide: 1400px;
+  --container-modal: 480px;
+
+  --radius-*: initial;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-control: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+  --radius-full: 9999px;
+
+  /* Elevation: one method per surface. ring, sm and md include their own 1px edge. */
+  --shadow-*: initial;
+  --shadow-ring: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06), 0 2px 4px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 2px 3px -1px rgb(0 0 0 / 0.1), 0 1px 0 0 rgb(25 28 33 / 0.02), 0 0 0 1px rgb(25 28 33 / 0.08);
+  --shadow-md:
+    0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06),
+    0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06);
+  --shadow-lg:
+    0 2.8px 2.2px rgb(0 0 0 / 0.034), 0 6.7px 5.3px rgb(0 0 0 / 0.048), 0 12.5px 10px rgb(0 0 0 / 0.06),
+    0 22.3px 17.9px rgb(0 0 0 / 0.072), 0 41.8px 33.4px rgb(0 0 0 / 0.086), 0 100px 80px rgb(0 0 0 / 0.12);
+
+  --ease-*: initial;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+:root {
+  color-scheme: light;
+  --dur-press: 160ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --dur-enter: 400ms;
+  --dur-hero: 700ms;
+  --scrim: rgb(0 0 0 / 0.4);
+  --z-sticky: 20;
+  --z-toast: 70;
+  --z-tooltip: 80;
+}

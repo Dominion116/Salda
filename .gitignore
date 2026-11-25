@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env.*
+!.env.example
+.vercel/
+.DS_Store
+
+# Supplied design file: no license is stated, so it is not published.
+design.md

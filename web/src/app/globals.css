@@ -1,0 +1,216 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@layer base {
+  :root {
+    -webkit-font-smoothing: antialiased;
+    font-optical-sizing: auto;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  button,
+  label,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  :disabled {
+    cursor: not-allowed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  main:focus {
+    outline: none;
+  }
+
+  /* Clears the 56px sticky bar plus 16px. */
+  [id] {
+    scroll-margin-top: 72px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* Marketing display: 44px on a phone, 72px on a wide screen. */
+@utility display-fluid {
+  font-size: clamp(2.75rem, 1.6rem + 3.8vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+}
+
+/* Grows the touch area of small controls to 44px without changing their look. */
+@utility hit-44 {
+  position: relative;
+
+  @media (pointer: coarse) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline: 0;
+      top: 50%;
+      height: 44px;
+      transform: translateY(-50%);
+    }
+  }
+}
+
+@utility skeleton {
+  background: var(--color-surface-2);
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: skeleton-pulse 1.5s linear infinite;
+  }
+}
+
+/* Range input. --fill is the filled share of the track, set by the Slider component. */
+@utility slider {
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+
+  &::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: linear-gradient(to right, var(--color-primary) var(--fill), var(--color-control-border) var(--fill));
+  }
+
+  &::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-control-border);
+  }
+
+  &::-moz-range-progress {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-primary);
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    margin-top: -9px; /* centers the 24px thumb on the 6px track */
+    border: 2px solid var(--color-primary);
+    border-radius: 9999px;
+    background: var(--color-canvas);
+  }
+
+  &::-moz-range-thumb {
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--color-primary);
+    border-radius: 9999px;
+    background: var(--color-canvas);
+  }
+
+  @media (forced-colors: active) {
+    appearance: auto;
+  }
+}
+
+/* Footer wordmark: decoration only, set in a hairline tone. */
+@utility wordmark {
+  font-size: clamp(7rem, 30vw, 26rem);
+  line-height: 0.8;
+  letter-spacing: -0.05em;
+  font-weight: 500;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Dialog: centered on desktop, bottom sheet under 640px. */
+.dialog {
+  margin: auto;
+  width: min(100% - 32px, 480px);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border-radius: var(--radius-xl);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  padding: 24px;
+  box-shadow: var(--shadow-lg);
+}
+
+.dialog::backdrop {
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+}
+
+@media (max-width: 639px) {
+  .dialog {
+    margin-block-end: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    padding-block-end: calc(24px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dialog[open] {
+    animation: dialog-in var(--dur-base) var(--ease-out);
+  }
+
+  .toast-enter {
+    animation: toast-in 220ms var(--ease-out);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Display specimens on the design page step down on phones. */
+@media (max-width: 639px) {
+  .specimen-display {
+    font-size: 44px;
+    line-height: 46px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .dialog::backdrop {
+    backdrop-filter: none;
+  }
+}
