@@ -11,12 +11,13 @@ import { SkipLink } from "./skip-link";
 
 export const container = "mx-auto w-full max-w-page px-4 sm:px-6 lg:px-10";
 
+// Rooted at "/" so they also work from /docs and the legal pages. On the home page they just scroll.
 export const siteLinks = [
-  { href: "#clearing", label: "Clearing" },
-  { href: "#who", label: "Who it’s for" },
-  { href: "#safety", label: "Safety" },
-  { href: "#steps", label: "Steps" },
-  { href: "#limits", label: "Limits" },
+  { href: "/#clearing", label: "Clearing" },
+  { href: "/#who", label: "Who it’s for" },
+  { href: "/#safety", label: "Safety" },
+  { href: "/#steps", label: "Steps" },
+  { href: "/docs", label: "Docs" },
 ] as const;
 
 /**
@@ -70,20 +71,37 @@ function SiteFooter() {
   return (
     <footer className="overflow-hidden border-t border-hairline">
       <div className={cx(container, "grid gap-12 py-16 md:grid-cols-12 md:gap-6")}>
-        <div className="flex flex-col gap-2 md:col-span-6">
-          <p className="text-title text-ink-strong">Salda</p>
-          <p className="max-w-[36ch] text-body-sm text-pretty text-ink-subtle">
+        <div className="flex flex-col gap-2 md:col-span-3">
+          <SaldaLogo className="h-7 self-start" />
+          <p className="max-w-[36ch] pt-2 text-body-sm text-pretty text-ink-subtle">
             Clears what a group of businesses owe each other with the least cash.
           </p>
         </div>
-        <nav aria-label="On this page" className="md:col-span-3">
-          <h2 className="pb-4 text-body-sm font-medium text-ink-strong">On this page</h2>
+        <nav aria-label="Overview" className="md:col-span-3">
+          <h2 className="pb-4 text-body-sm font-medium text-ink-strong">Overview</h2>
           <ul className="flex flex-col gap-3 pointer-coarse:gap-5">
-            {siteLinks.map((link) => (
+            {overviewLinks.map((link) => (
               <li key={link.href}>
                 <a href={link.href} className={linkClass}>{link.label}</a>
               </li>
             ))}
+          </ul>
+        </nav>
+        <nav aria-label="Docs and legal" className="md:col-span-3">
+          <h2 className="pb-4 text-body-sm font-medium text-ink-strong">Docs and legal</h2>
+          <ul className="flex flex-col gap-3 pointer-coarse:gap-5">
+            <li>
+              <Link href="/docs" className={linkClass}>Documentation</Link>
+            </li>
+            <li>
+              <Link href="/privacy" className={linkClass}>Privacy policy</Link>
+            </li>
+            <li>
+              <Link href="/terms" className={linkClass}>Terms of service</Link>
+            </li>
+            <li>
+              <a href="https://github.com/Dominion116/Salda" rel="noopener" className={linkClass}>Source code on GitHub</a>
+            </li>
           </ul>
         </nav>
         <nav aria-label="Project" className="md:col-span-3">
@@ -123,6 +141,14 @@ function SiteFooter() {
   );
 }
 
+const overviewLinks = [
+  { href: "/#clearing", label: "Clearing" },
+  { href: "/#who", label: "Who it’s for" },
+  { href: "/#safety", label: "Safety" },
+  { href: "/#steps", label: "Steps" },
+  { href: "/#limits", label: "Limits" },
+] as const;
+
 /** Two hairline rails that run the length of the page, behind the content. */
 function Rails() {
   return (
@@ -134,13 +160,14 @@ function Rails() {
   );
 }
 
-export function SiteLayout({ children }: { children: ReactNode }) {
+/** `rails` draws the landing page's two hairline rails; reading pages leave them off. */
+export function SiteLayout({ children, rails = true }: { children: ReactNode; rails?: boolean }) {
   return (
     <>
       <SkipLink />
       <SiteHeader />
       <div className="relative">
-        <Rails />
+        {rails ? <Rails /> : null}
         <main id="main" tabIndex={-1} className="relative">
           {children}
         </main>
