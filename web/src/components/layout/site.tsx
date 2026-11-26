@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { SaldaMark } from "@/components/brand";
+import { SaldaLogo } from "@/components/brand";
 import { Reveal } from "@/components/motion/motion";
 import { Letters } from "@/components/motion/words";
 import { buttonClass } from "@/components/ui/button-class";
@@ -19,13 +19,21 @@ export const siteLinks = [
   { href: "#limits", label: "Limits" },
 ] as const;
 
+/**
+ * A floating glass pill. It is chrome over moving content, so glass is allowed here (design.md); the
+ * `glass-pill` class falls back to a solid surface for reduced transparency and forced colors.
+ */
 function SiteHeader() {
   return (
-    <header className="sticky top-0 z-(--z-sticky) border-b border-hairline bg-canvas">
-      <div className={cx(container, "flex h-14 items-center justify-between gap-4 md:grid md:grid-cols-[1fr_auto_1fr]")}>
-        <Link href="/" className="hit-44 flex items-center gap-2 justify-self-start text-title-sm text-ink-strong">
-          <SaldaMark />
-          Salda
+    <header className="pointer-events-none sticky top-0 z-(--z-sticky) px-3 pt-3 sm:px-4 sm:pt-4">
+      <div
+        className={cx(
+          "glass-pill pointer-events-auto relative mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 rounded-full ps-5 pe-2",
+          "md:grid md:grid-cols-[1fr_auto_1fr]",
+        )}
+      >
+        <Link href="/" className="hit-44 flex items-center justify-self-start rounded-full">
+          <SaldaLogo priority />
         </Link>
         <nav aria-label="Page sections" className="hidden md:block">
           <ul className="flex items-center">
@@ -33,7 +41,7 @@ function SiteHeader() {
               <li key={link.href}>
                 <a
                   href={link.href}
-                  className="flex h-11 items-center px-3 text-body-sm whitespace-nowrap text-ink-subtle transition-[color] duration-150 ease-standard hover:text-ink-strong lg:px-4"
+                  className="flex h-11 items-center rounded-full px-3 text-body-sm whitespace-nowrap text-ink transition-[color] duration-150 ease-standard hover:text-ink-strong lg:px-4"
                 >
                   {link.label}
                 </a>
@@ -45,13 +53,13 @@ function SiteHeader() {
           <span className="max-sm:hidden">
             <Badge>Testnet</Badge>
           </span>
-          <Link href="/app" className={buttonClass()}>
+          <Link href="/app" className={buttonClass({ size: "lg", pill: true })}>
             Open the app
           </Link>
           <MobileMenu links={siteLinks} />
         </div>
+        <span aria-hidden="true" className="scroll-progress" />
       </div>
-      <span aria-hidden="true" className="scroll-progress" />
     </header>
   );
 }

@@ -33,17 +33,21 @@ export function buttonClass({
   variant = "secondary",
   size = "md",
   withIcon = false,
+  pill = false,
 }: {
   variant?: ButtonVariant;
   size?: ButtonSize;
   withIcon?: boolean;
+  /** Fully rounded, to sit inside a pill-shaped container. */
+  pill?: boolean;
 } = {}) {
+  const sizing = pill ? sizes[size].replace(/\brounded-\S+/, "rounded-full") : sizes[size];
   return cx(
     "hit-44 inline-flex items-center justify-center gap-1.5 text-center select-none",
     "transition-[scale,background-color,color] duration-150 ease-out motion-safe:active:scale-97",
     "disabled:pointer-events-none disabled:opacity-50 aria-busy:pointer-events-none",
     variants[variant],
-    sizes[size],
+    sizing,
     withIcon && iconSide[size],
   );
 }

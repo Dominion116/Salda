@@ -42,9 +42,9 @@
     outline: none;
   }
 
-  /* Clears the 56px sticky bar plus 16px. */
+  /* Clears the floating 56px navbar, its 16px top gap, and 16px more. */
   [id] {
-    scroll-margin-top: 72px;
+    scroll-margin-top: 88px;
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -147,6 +147,39 @@
 @keyframes skeleton-pulse {
   50% {
     opacity: 0.6;
+  }
+}
+
+/*
+ * The landing navbar: frosted glass over the page as it scrolls. 80% canvas keeps text on it at 4.5:1 or
+ * more even over the dark cards. Solid wherever blur is missing or unwanted.
+ */
+.glass-pill {
+  background: color-mix(in oklab, var(--color-canvas) 80%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-ink-strong) 8%, transparent),
+    var(--shadow-sm);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-pill {
+    background: var(--color-canvas);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-pill {
+    background: var(--color-canvas);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .glass-pill {
+    border: 1px solid CanvasText;
   }
 }
 
