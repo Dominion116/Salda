@@ -475,7 +475,7 @@ export function Closing() {
         variant="rise"
         className={cx(container, "flex flex-col items-start gap-8 py-16 lg:flex-row lg:items-center lg:justify-between lg:py-32")}
       >
-        <Title id="closing-title" first="Start with three shops" rest="and see what two dollars can settle." />
+        <Title id="closing-title" first="Start with three shops" rest="and see what 2.00 can settle." />
         <div data-reveal-item style={delay(500)}>
           <Magnetic>
             <Link href="/demo" className={buttonClass({ variant: "primary", size: "xl" })}>

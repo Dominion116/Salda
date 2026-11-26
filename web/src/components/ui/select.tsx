@@ -25,7 +25,7 @@ export function Select({ label, options, help, error, compact, id, ...props }: S
         className={cx(
           "min-w-0 rounded-control border bg-canvas text-ink hover:border-ink-subtle",
           error ? "border-danger" : "border-control-border",
-          compact ? "min-h-8 px-2 text-body-sm pointer-coarse:min-h-11" : "min-h-10 w-full px-3 text-body pointer-coarse:min-h-11 md:text-body-sm",
+          compact ? "min-h-8 px-2 text-body pointer-coarse:min-h-11 md:text-body-sm" : "min-h-10 w-full px-3 text-body pointer-coarse:min-h-11 md:text-body-sm",
         )}
         aria-invalid={error ? true : undefined}
         aria-describedby={note ? `${selectId}-note` : undefined}
