@@ -23,6 +23,8 @@ import { formatAmount, ONE, parseAmount } from "@/lib/money";
 import { aevum } from "@/wallet/config";
 import { WalletProviders } from "@/wallet/providers";
 import { NetworkBanner, WalletButton } from "@/wallet/wallet-button";
+import { txUrl } from "@/chain/salda";
+import { useLiveDemo, type AttackResult, type LiveDemo } from "./live-demo";
 
 /*
  * The judge demo (PRD 5.2), on sample data until Phase 8. Every "signature" here stands in for
@@ -60,6 +62,9 @@ function Demo() {
   const [cash, setCash] = useState(DEMO_MAX_CASH);
   const heading = useRef<HTMLHeadingElement>(null);
   const shown = useRef<Stage>("connect");
+  const liveDemo = useLiveDemo();
+  // The live demo runs only with a wallet on Aevum and a server set up for it. Otherwise: sample data.
+  const live = mode === "wallet" && liveDemo.ready ? liveDemo : undefined;
 
   const you = mode === "wallet" && address ? (address as Address) : SAMPLE_YOU;
   const nameOf = (member: Address) => (member === you ? "Ada (you)" : member === demoBen ? "Ben" : member === demoChidi ? "Chidi" : "Unknown");
@@ -72,6 +77,7 @@ function Demo() {
     setStage("connect");
     setReached(0);
     setCash(DEMO_MAX_CASH);
+    liveDemo.reset();
   };
 
   // Moves focus to the new step’s heading, so keyboard and screen reader users follow along.
@@ -169,15 +175,24 @@ function Demo() {
               }}
             />
           ) : null}
-          {stage === "start" ? <StartStage you={you} nameOf={nameOf} onDone={() => go("cash")} /> : null}
+          {stage === "start" ? <StartStage you={you} nameOf={nameOf} live={live} onDone={() => go("cash")} /> : null}
           {stage === "cash" ? (
             <CashStage you={you} at={at} cash={cash} setCash={setCash} nameOf={nameOf} onNext={() => go("settle")} />
           ) : null}
-          {stage === "settle" ? <SettleStage you={you} at={at} cash={cash} nameOf={nameOf} onDone={() => go("receipt")} /> : null}
-          {stage === "receipt" ? (
-            <ReceiptStage cash={cash} onSafety={() => go("safety")} onRestart={restart} />
+          {stage === "settle" ? (
+            <SettleStage you={you} at={at} cash={cash} nameOf={nameOf} live={live} onDone={() => go("receipt")} />
           ) : null}
-          {stage === "safety" ? <SafetyStage you={you} at={at} onRestart={restart} /> : null}
+          {stage === "receipt" ? (
+            <ReceiptStage cash={cash} live={live} onSafety={() => go("safety")} onRestart={restart} />
+          ) : null}
+          {stage === "safety" ? (
+            <SafetyStage
+              you={you}
+              at={at}
+              live={mode === "wallet" && liveDemo.attacksReady ? liveDemo : undefined}
+              onRestart={restart}
+            />
+          ) : null}
         </section>
       </main>
     </div>
@@ -195,6 +210,48 @@ const titles: Record<Stage, string> = {
 
 function Lede({ children }: { children: ReactNode }) {
   return <p className="max-w-[64ch] pb-8 text-body-lg text-pretty text-ink">{children}</p>;
+}
+
+/** Before a real wallet prompt in the live demo. */
+function LiveSignNote() {
+  return (
+    <p className="flex items-start gap-2 rounded-lg bg-info-fill p-3 text-body-sm text-on-info">
+      <AlertIcon className="mt-0.5 shrink-0" />
+      Your wallet will ask you to sign. Check that the details there match these.
+    </p>
+  );
+}
+
+function LiveError({ live }: { live?: LiveDemo }) {
+  if (!live?.error) return null;
+  return (
+    <p role="alert" className="flex items-start gap-2 text-body-sm text-on-danger">
+      <AlertIcon className="mt-0.5 shrink-0" />
+      {live.error}
+    </p>
+  );
+}
+
+function TxLinks({ links }: { links: [string, `0x${string}` | undefined][] }) {
+  const shown = links.filter((link): link is [string, `0x${string}`] => Boolean(link[1]));
+  if (shown.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-2">
+      {shown.map(([label, hash]) => (
+        <li key={hash}>
+          <a
+            href={txUrl(hash)}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex min-h-6 items-center gap-1 text-body-sm text-link underline underline-offset-4 hover:text-primary-hover"
+          >
+            {label}
+            <ExternalIcon className="shrink-0" />
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** Stands in for the wallet prompt a live demo shows. */
@@ -314,9 +371,21 @@ function Progress({ steps, done, running }: { steps: readonly string[]; done: nu
   );
 }
 
-function StartStage({ you, nameOf, onDone }: { you: Address; nameOf: (member: Address) => string; onDone: () => void }) {
+function StartStage({
+  you,
+  nameOf,
+  live,
+  onDone,
+}: {
+  you: Address;
+  nameOf: (member: Address) => string;
+  live?: LiveDemo;
+  onDone: () => void;
+}) {
   const steps = ["Circle created for the three shops", "Three invoices registered and signed by all three", "0.02 tUSD8 sent to your wallet"] as const;
-  const sequence = useSequence(steps.length, 800);
+  const sample = useSequence(steps.length, 800);
+  const [running, setRunning] = useState(false);
+  const sequence = live ? { done: live.startDone, started: running || live.startDone >= 0 } : sample;
   const finished = sequence.done >= steps.length - 1;
   const invoices = demoInvoices(you, 0);
 
@@ -334,7 +403,22 @@ function StartStage({ you, nameOf, onDone }: { you: Address; nameOf: (member: Ad
         </Panel>
         <Panel heading="h2" title="Setup">
           <div className="flex flex-col items-start gap-4">
-            <Progress steps={steps} done={sequence.done} running={sequence.started && !finished} />
+            <Progress steps={steps} done={sequence.done} running={sequence.started && !finished && !live?.error} />
+            <LiveError live={live} />
+            {live && finished && !live.seeded ? (
+              <p className="text-body-sm text-ink">
+                Today’s limit for free test tokens was reached, so none were sent. You can still settle with 0.00 cash.
+              </p>
+            ) : null}
+            {live ? (
+              <TxLinks
+                links={[
+                  ["Circle created", live.txs.create],
+                  ["Invoices registered", live.txs.register],
+                  ["0.02 tUSD8 sent", live.txs.seed],
+                ]}
+              />
+            ) : null}
             {finished ? (
               <Button variant="primary" size="lg" onClick={onDone}>
                 Choose your cash
@@ -347,9 +431,14 @@ function StartStage({ you, nameOf, onDone }: { you: Address; nameOf: (member: Ad
                 title="Sign to start the demo"
                 description="Your wallet asks you to sign one message. It co-signs the invoices you are part of."
                 confirm="Sign"
-                onConfirm={() => sequence.run()}
+                onConfirm={async () => {
+                  if (!live) return sample.run();
+                  setRunning(true);
+                  await live.start();
+                  setRunning(false);
+                }}
               >
-                <SampleSignNote />
+                {live ? <LiveSignNote /> : <SampleSignNote />}
                 <KeyValues
                   rows={[
                     ["Message", "Register 3 invoices"],
@@ -466,20 +555,25 @@ function SettleStage({
   at,
   cash,
   nameOf,
+  live,
   onDone,
 }: {
   you: Address;
   at: number;
   cash: bigint;
   nameOf: (member: Address) => string;
+  live?: LiveDemo;
   onDone: () => void;
 }) {
   const round = demoRound(cash);
   const plan = demoPlan(you, cash, at);
   const mine = plan.positions.find((position) => position.member === you);
   const steps = ["You signed", "Ben and Chidi signed (demo counterparties)", `Submitting to ${aevum.name}`, "Settled"] as const;
-  const sequence = useSequence(steps.length, 900);
-  const finished = sequence.done >= steps.length - 1;
+  const sample = useSequence(steps.length, 900);
+  const [running, setRunning] = useState(false);
+  const sequence = live ? { done: live.settleDone, started: running || live.settleDone >= 0 } : sample;
+  // Once a live round is sent, its receipt can show even while it is still confirming.
+  const finished = sequence.done >= steps.length - 1 || (live !== undefined && live.settleDone >= 2);
 
   return (
     <>
@@ -501,7 +595,8 @@ function SettleStage({
         </Panel>
         <Panel heading="h2" title="Settlement">
           <div className="flex flex-col items-start gap-4">
-            <Progress steps={steps} done={sequence.done} running={sequence.started && !finished} />
+            <Progress steps={steps} done={sequence.done} running={sequence.started && !finished && !live?.error} />
+            <LiveError live={live} />
             {finished ? (
               <Button variant="primary" size="lg" onClick={onDone}>
                 View receipt
@@ -514,9 +609,14 @@ function SettleStage({
                 title={round.cashUsed > 0n ? `Pay ${formatAmount(round.cashUsed)} tUSD8?` : "Approve this round?"}
                 description={`Clears ${formatAmount(round.totalCleared)} of debt between ${nameOf(you)}, Ben and Chidi.`}
                 confirm={round.cashUsed > 0n ? `Sign and pay ${formatAmount(round.cashUsed)} tUSD8` : "Sign approval"}
-                onConfirm={() => sequence.run()}
+                onConfirm={async () => {
+                  if (!live) return sample.run();
+                  setRunning(true);
+                  await live.settle(cash);
+                  setRunning(false);
+                }}
               >
-                <SampleSignNote />
+                {live ? <LiveSignNote /> : <SampleSignNote />}
                 <KeyValues
                   rows={[
                     ["Authorizes", round.cashUsed > 0n ? `${formatAmount(round.cashUsed)} tUSD8, this round only` : "No payment"],
@@ -533,7 +633,17 @@ function SettleStage({
   );
 }
 
-function ReceiptStage({ cash, onSafety, onRestart }: { cash: bigint; onSafety: () => void; onRestart: () => void }) {
+function ReceiptStage({
+  cash,
+  live,
+  onSafety,
+  onRestart,
+}: {
+  cash: bigint;
+  live?: LiveDemo;
+  onSafety: () => void;
+  onRestart: () => void;
+}) {
   const round = demoRound(cash);
   const ratio = round.cashUsed === 0n ? "No cash used" : `${(Number(round.totalCleared) / Number(round.cashUsed)).toFixed(1)}×`;
 
@@ -563,9 +673,20 @@ function ReceiptStage({ cash, onSafety, onRestart }: { cash: bigint; onSafety: (
             ]}
           />
         </Panel>
-        <p className="text-body-sm text-ink-subtle">
-          Sample data: there is no transaction to view. With a live wallet, this links to the {aevum.name} explorer.
-        </p>
+        {live ? (
+          <div className="flex flex-col gap-2">
+            {live.settled?.state === "pending" ? (
+              <p role="status" className="text-body-sm text-ink">
+                Sent, and still confirming. The link below works once it does.
+              </p>
+            ) : null}
+            <TxLinks links={[["View the settlement on the Aevum explorer", live.txs.settle]]} />
+          </div>
+        ) : (
+          <p className="text-body-sm text-ink-subtle">
+            Sample data: there is no transaction to view. With a live wallet, this links to the {aevum.name} explorer.
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button variant="primary" size="lg" onClick={onSafety}>
             Try the safety checks
@@ -579,20 +700,34 @@ function ReceiptStage({ cash, onSafety, onRestart }: { cash: bigint; onSafety: (
   );
 }
 
-function SafetyStage({ you, at, onRestart }: { you: Address; at: number; onRestart: () => void }) {
+function SafetyStage({ you, at, live, onRestart }: { you: Address; at: number; live?: LiveDemo; onRestart: () => void }) {
   const [revoked, setRevoked] = useState(false);
   const [choice, setChoice] = useState(attacks[1]?.key ?? "ratio");
   const [phase, setPhase] = useState<"idle" | "checking" | "done">("idle");
+  const [liveResult, setLiveResult] = useState<AttackResult | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const mandate = demoMandate(you, at, revoked);
   const attack = attacks.find((item) => item.key === choice) ?? attacks[0];
-  const result = attack ? checkAttack(attack, you, at, revoked) : null;
+  // Live: the agent signs the bad round and it is simulated against the deployed contract. Nothing is sent.
+  const result = live
+    ? liveResult?.refused
+      ? { reason: liveResult.message, revert: liveResult.revert ?? "Reverted" }
+      : null
+    : attack
+      ? checkAttack(attack, you, at, revoked)
+      : null;
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  const check = () => {
+  const check = async () => {
     window.clearTimeout(timer.current);
     setPhase("checking");
+    if (live && attack) {
+      const answer = await live.attack(attack.key, revoked);
+      setLiveResult(answer);
+      setPhase(answer ? "done" : "idle");
+      return;
+    }
     timer.current = window.setTimeout(() => setPhase("done"), 900);
   };
 
@@ -663,12 +798,13 @@ function SafetyStage({ you, at, onRestart }: { you: Address; at: number; onResta
                   />
                 ))}
               </ChoiceGroup>
-              <Button variant="primary" size="lg" icon={<PlayIcon />} loading={phase === "checking"} onClick={check}>
+              <Button variant="primary" size="lg" icon={<PlayIcon />} loading={phase === "checking"} onClick={() => void check()}>
                 Send to the contract
               </Button>
             </div>
           </Panel>
 
+          <LiveError live={live} />
           <div role="status">
             {phase === "checking" ? (
               <p className="flex items-center gap-2 text-body-sm text-ink">

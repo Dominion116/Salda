@@ -19,13 +19,22 @@ interface IUSD8 is IERC20 {
         bytes32 nonce,
         bytes memory signature
     ) external;
+
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external;
+}
+
+/// @notice The one call Salda makes to an ERC-8004 identity registry: who owns an agent ID.
+interface IAgentRegistry {
+    function ownerOf(uint256 agentId) external view returns (address);
 }
 
 /// @title SaldaClearing
 /// @notice Multilateral clearing for a circle of businesses. Members co-sign invoices; a round cancels
 ///         what they owe each other and moves only each member's net difference in tUSD8, all or nothing.
-/// @dev Tier 1 (manual consent). Nobody is trusted: every round is rechecked here, authority comes only from
-///      signatures, and the contract never holds tUSD8 after a call. Business names exist only as salted hashes.
+/// @dev Nobody is trusted: every round is rechecked here, authority comes only from signatures, and the contract
+///      never holds tUSD8 after a call. Business names exist only as salted hashes. Members consent to a round
+///      either by signing it (Tier 1) or through a standing mandate that an agent uses within fixed limits (Tier 2).
 contract SaldaClearing is EIP712, ReentrancyGuard {
     using SafeERC20 for IUSD8;
 
@@ -53,6 +62,18 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
         keccak256("VoidInvoice(uint256 invoiceId,uint256 remainingAmount,uint256 deadline)");
     bytes32 public constant APPROVE_ROUND_TYPEHASH =
         keccak256("ApproveRound(bytes32 roundHash,address member,uint256 outTotal,uint256 inTotal)");
+    bytes32 public constant STANDING_MANDATE_TYPEHASH = keccak256(
+        "StandingMandate(uint256 circleId,address member,address agent,uint256 agentId,uint256 maxNetDebitPerRound,uint256 totalCap,uint32 maxDueDays,uint32 minClearRatioBps,uint32 minCooldown,uint64 expiry,uint64 mandateNonce)"
+    );
+    bytes32 public constant AGENT_APPROVAL_TYPEHASH = keccak256("AgentApproval(bytes32 roundHash,address agent)");
+    bytes32 public constant REVOKE_MANDATE_TYPEHASH = keccak256("RevokeMandate(bytes32 mandateHash,uint256 deadline)");
+    bytes32 public constant BUMP_MANDATE_EPOCH_TYPEHASH =
+        keccak256("BumpMandateEpoch(address member,uint64 epoch,uint256 deadline)");
+
+    /// @notice `ConsentInput.kind`: the member signed this round themselves.
+    uint8 public constant CONSENT_SIGNED = 0;
+    /// @notice `ConsentInput.kind`: the member's active standing mandate agrees for them.
+    uint8 public constant CONSENT_MANDATE = 1;
 
     // ------------------------------------------------------------------- types
 
@@ -115,13 +136,57 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
         uint256[] clearAmounts;
     }
 
-    /// @dev Net debtors sign an EIP-3009 `ReceiveWithAuthorization` for their net debit, with
-    ///      `nonce = keccak256(abi.encode(address(this), roundHash, member))`. Everyone else signs `ApproveRound`,
-    ///      and `validAfter` / `validBefore` are ignored for them.
+    /// @dev With `kind == CONSENT_SIGNED`, net debtors sign an EIP-3009 `ReceiveWithAuthorization` for their net
+    ///      debit, with `nonce = keccak256(abi.encode(address(this), roundHash, member))`, and everyone else signs
+    ///      `ApproveRound` (`validAfter` / `validBefore` are then ignored). With `kind == CONSENT_MANDATE`, the
+    ///      member's active mandate is used and the other fields are ignored.
     struct ConsentInput {
         address member;
+        uint8 kind;
         uint256 validAfter;
         uint256 validBefore;
+        bytes signature;
+    }
+
+    /// @dev What a member lets an agent do for them, signed once as EIP-712 `StandingMandate`.
+    struct StandingMandate {
+        uint256 circleId;
+        address member;
+        /// The key whose `AgentApproval` every round using this mandate needs. Not necessarily the sender.
+        address agent;
+        /// ERC-8004 agent ID, or 0.
+        uint256 agentId;
+        uint256 maxNetDebitPerRound;
+        uint256 totalCap;
+        /// Invoices this member owes in a round must fall due within this many days.
+        uint32 maxDueDays;
+        /// 30_000 means at least 3.0 cleared for every 1 paid. 0 turns the rule off.
+        uint32 minClearRatioBps;
+        /// Seconds that must pass between two uses.
+        uint32 minCooldown;
+        uint64 expiry;
+        /// Must equal `memberMandateEpoch[member]` when activated.
+        uint64 mandateNonce;
+    }
+
+    struct MandateState {
+        bool activated;
+        bool revoked;
+        uint64 lastUsedAt;
+        uint256 spent;
+    }
+
+    /// @dev EIP-2612 `permit` for `totalCap`, applied on activation. Unused when `maxNetDebitPerRound == 0`.
+    struct PermitInput {
+        uint256 deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    /// @dev The agent's EIP-712 `AgentApproval(roundHash, agent)`. One approval covers every mandate naming it.
+    struct AgentApproval {
+        address agent;
         bytes signature;
     }
 
@@ -137,6 +202,8 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
     // ------------------------------------------------------------------- state
 
     IUSD8 public immutable token;
+    /// @notice ERC-8004 identity registry, or zero when agent identity checks are off.
+    IAgentRegistry public immutable agentRegistry;
 
     uint256 public circleCount;
     uint256 public invoiceCount;
@@ -153,6 +220,14 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
     mapping(bytes32 structHash => bool) public usedInvoiceHashes;
     /// @notice Rounds already settled.
     mapping(bytes32 roundHash => bool) public usedRoundHashes;
+
+    /// @notice A mandate can be activated only while its `mandateNonce` equals this. Every revoke advances it.
+    mapping(address member => uint64) public memberMandateEpoch;
+    /// @notice The member's most recently activated mandate, across all circles, or zero. It stays set after a
+    ///         revoke, so a round that tries to use it fails with `MandateRevoked`; `hasLiveMandate` says if it is usable.
+    mapping(address member => bytes32 mandateHash) public activeMandateOf;
+    mapping(bytes32 mandateHash => StandingMandate) private _mandates;
+    mapping(bytes32 mandateHash => MandateState) private _mandateState;
 
     // ------------------------------------------------------------------ events
 
@@ -174,6 +249,12 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
     event RoundSettled(
         bytes32 indexed roundHash, uint256 indexed circleId, address submitter, uint256 grossCleared, uint256 cashMoved
     );
+    event MandateActivated(
+        bytes32 indexed mandateHash, address indexed member, uint256 indexed circleId, address agent, uint256 agentId
+    );
+    event MandateUsed(bytes32 indexed mandateHash, bytes32 indexed roundHash, uint256 netDebit);
+    event MandateCancelled(bytes32 indexed mandateHash, address indexed member);
+    event MandateEpochBumped(address indexed member, uint64 epoch);
 
     // ------------------------------------------------------------------ errors
 
@@ -201,10 +282,30 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
     error ConsentCountMismatch();
     error MissingConsent(address member);
     error CashNotConserved();
+    error UnknownConsentKind();
+    error StaleMandate();
+    error MandateAlreadyUsed();
+    error MandateAlreadyActive();
+    error MandateNotFound();
+    error NotMandateOwner();
+    error AgentNotRegistered();
+    error InsufficientAllowance();
+    error NoActiveMandate(address member);
+    error MandateRevoked(address member);
+    error MandateExpired(address member);
+    error MandateWrongCircle(address member);
+    error MissingAgentApproval(address agent);
+    error CooldownActive(address member);
+    error InvoiceDueTooFar(uint256 invoiceId);
+    error ExceedsRoundCap(address member);
+    error ExceedsTotalCap(address member);
+    error ClearRatioTooLow(address member);
 
-    constructor(IUSD8 token_) EIP712("SaldaClearing", "1") {
+    /// @param agentRegistry_ ERC-8004 identity registry, or zero to turn agent identity checks off.
+    constructor(IUSD8 token_, IAgentRegistry agentRegistry_) EIP712("SaldaClearing", "1") {
         if (address(token_) == address(0)) revert ZeroAddress();
         token = token_;
+        agentRegistry = agentRegistry_;
     }
 
     // ================================================================ circles
@@ -341,14 +442,15 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
 
     // ================================================================= rounds
 
-    /// @notice Settles a clearing round, all or nothing. Anyone may submit; every touched member must consent.
+    /// @notice Settles a clearing round, all or nothing. Anyone may submit; every touched member must consent,
+    ///         by signature or through their standing mandate. `approvals` is empty when no mandate is used.
     /// @dev Pulls every net debit first, then pays every net credit, and requires the two totals to match, so the
     ///      contract's tUSD8 balance never changes.
-    function settle(RoundInput calldata round, ConsentInput[] calldata consents)
-        external
-        nonReentrant
-        returns (bytes32 roundHash)
-    {
+    function settle(
+        RoundInput calldata round,
+        ConsentInput[] calldata consents,
+        AgentApproval[] calldata approvals
+    ) external nonReentrant returns (bytes32 roundHash) {
         if (block.timestamp > round.deadline) revert Expired();
         uint256 n = round.invoiceIds.length;
         if (n == 0 || n > MAX_INVOICES_PER_ROUND) revert BadRoundSize();
@@ -361,7 +463,10 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
         Ledger memory ledger = _applyRound(round);
         if (consents.length != ledger.count) revert ConsentCountMismatch();
 
-        uint256 pulled = _collect(roundHash, ledger, consents);
+        uint256 pulled;
+        for (uint256 k; k < ledger.count; ++k) {
+            pulled += _consent(roundHash, round, ledger, k, consents, approvals);
+        }
         uint256 paid = _payOut(ledger);
         if (pulled != paid) revert CashNotConserved();
 
@@ -381,6 +486,111 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
                 round.clearAmounts
             )
         );
+    }
+
+    // =============================================================== mandates
+
+    /// @notice Stores a member's signed standing mandate and applies their `permit`. Anyone may submit.
+    /// @dev One live mandate per member across all circles, because tUSD8 keeps a single allowance per spender.
+    ///      The permit runs in try/catch, so someone submitting it first from the mempool cannot block activation.
+    function activateMandate(StandingMandate calldata m, bytes calldata memberSig, PermitInput calldata permit)
+        external
+        returns (bytes32 mandateHash)
+    {
+        if (m.member == address(0) || m.agent == address(0)) revert ZeroAddress();
+        if (m.mandateNonce != memberMandateEpoch[m.member]) revert StaleMandate();
+        if (block.timestamp >= m.expiry) revert MandateExpired(m.member);
+        if (!_members[m.circleId][m.member].active) revert NotActiveMember(m.member);
+
+        mandateHash = hashMandate(m);
+        MandateState storage s = _mandateState[mandateHash];
+        if (s.activated) revert MandateAlreadyUsed();
+        if (hasLiveMandate(m.member)) revert MandateAlreadyActive();
+        _requireSig(m.member, _hashTypedDataV4(mandateHash), memberSig);
+        _checkAgentIdentity(m.agent, m.agentId);
+
+        if (m.maxNetDebitPerRound > 0) {
+            try token.permit(m.member, address(this), m.totalCap, permit.deadline, permit.v, permit.r, permit.s) {}
+                catch {}
+            if (token.allowance(m.member, address(this)) < m.totalCap) revert InsufficientAllowance();
+        }
+
+        s.activated = true;
+        _mandates[mandateHash] = m;
+        activeMandateOf[m.member] = mandateHash;
+        emit MandateActivated(mandateHash, m.member, m.circleId, m.agent, m.agentId);
+    }
+
+    /// @notice Revokes one of the caller's mandates. Also invalidates every signed mandate not yet activated.
+    function revokeMandate(bytes32 mandateHash) external {
+        address member = _mandates[mandateHash].member;
+        if (member == address(0)) revert MandateNotFound();
+        if (member != msg.sender) revert NotMandateOwner();
+        _revokeMandate(mandateHash, member);
+    }
+
+    /// @notice Gasless `revokeMandate`: the member signs `RevokeMandate`, anyone submits.
+    function revokeMandateWithSig(bytes32 mandateHash, uint256 deadline, bytes calldata signature) external {
+        _checkDeadline(deadline);
+        address member = _mandates[mandateHash].member;
+        if (member == address(0)) revert MandateNotFound();
+        _requireSig(
+            member,
+            _hashTypedDataV4(keccak256(abi.encode(REVOKE_MANDATE_TYPEHASH, mandateHash, deadline))),
+            signature
+        );
+        _revokeMandate(mandateHash, member);
+    }
+
+    /// @notice Invalidates the caller's active mandate and every mandate they signed but never activated.
+    function bumpMandateEpoch() external {
+        _bumpEpoch(msg.sender);
+    }
+
+    /// @notice Gasless `bumpMandateEpoch`: the member signs `BumpMandateEpoch` for their current epoch.
+    function bumpMandateEpochWithSig(address member, uint256 deadline, bytes calldata signature) external {
+        _checkDeadline(deadline);
+        _requireSig(
+            member,
+            _hashTypedDataV4(
+                keccak256(abi.encode(BUMP_MANDATE_EPOCH_TYPEHASH, member, memberMandateEpoch[member], deadline))
+            ),
+            signature
+        );
+        _bumpEpoch(member);
+    }
+
+    /// @notice True while the member's active mandate can still be used.
+    function hasLiveMandate(address member) public view returns (bool) {
+        bytes32 mandateHash = activeMandateOf[member];
+        if (mandateHash == bytes32(0)) return false;
+        StandingMandate storage m = _mandates[mandateHash];
+        return !_mandateState[mandateHash].revoked && m.mandateNonce == memberMandateEpoch[member]
+            && block.timestamp < m.expiry;
+    }
+
+    /// @notice The EIP-712 struct hash of a mandate, which is also its id.
+    function hashMandate(StandingMandate calldata m) public pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                STANDING_MANDATE_TYPEHASH,
+                m.circleId,
+                m.member,
+                m.agent,
+                m.agentId,
+                m.maxNetDebitPerRound,
+                m.totalCap,
+                m.maxDueDays,
+                m.minClearRatioBps,
+                m.minCooldown,
+                m.expiry,
+                m.mandateNonce
+            )
+        );
+    }
+
+    function getMandate(bytes32 mandateHash) external view returns (StandingMandate memory, MandateState memory) {
+        return (_mandates[mandateHash], _mandateState[mandateHash]);
     }
 
     // ================================================================== reads
@@ -588,25 +798,94 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
         return ledger.count++;
     }
 
-    /// @dev Verifies each touched member's consent and pulls every net debit into this contract.
-    function _collect(bytes32 roundHash, Ledger memory ledger, ConsentInput[] calldata consents)
-        private
-        returns (uint256 pulled)
-    {
-        for (uint256 k; k < ledger.count; ++k) {
-            address member = ledger.members[k];
-            ConsentInput calldata consent = _consentOf(consents, member);
-            uint256 outTotal = ledger.outTotal[k];
-            uint256 inTotal = ledger.inTotal[k];
+    /// @dev Verifies the consent of the k-th touched member and pulls their net debit into this contract.
+    function _consent(
+        bytes32 roundHash,
+        RoundInput calldata round,
+        Ledger memory ledger,
+        uint256 k,
+        ConsentInput[] calldata consents,
+        AgentApproval[] calldata approvals
+    ) private returns (uint256 pulled) {
+        address member = ledger.members[k];
+        ConsentInput calldata consent = _consentOf(consents, member);
+        uint256 outTotal = ledger.outTotal[k];
+        uint256 inTotal = ledger.inTotal[k];
 
-            if (outTotal > inTotal) {
-                pulled += _pull(roundHash, consent, outTotal - inTotal);
-            } else {
-                // Net creditors and net-zero members must agree too: a pure cycle moves no cash at all.
-                _requireSig(member, _approveRoundDigest(roundHash, member, outTotal, inTotal), consent.signature);
-            }
-            emit MemberSettled(roundHash, member, outTotal, inTotal);
+        if (consent.kind == CONSENT_MANDATE) {
+            pulled = _useMandate(roundHash, round, member, outTotal, inTotal, approvals);
+        } else if (consent.kind != CONSENT_SIGNED) {
+            revert UnknownConsentKind();
+        } else if (outTotal > inTotal) {
+            pulled = _pull(roundHash, consent, outTotal - inTotal);
+        } else {
+            // Net creditors and net-zero members must agree too: a pure cycle moves no cash at all.
+            _requireSig(member, _approveRoundDigest(roundHash, member, outTotal, inTotal), consent.signature);
         }
+        emit MemberSettled(roundHash, member, outTotal, inTotal);
+    }
+
+    /// @dev Applies every mandate rule, then pulls the net debit with the allowance the mandate's permit set.
+    function _useMandate(
+        bytes32 roundHash,
+        RoundInput calldata round,
+        address member,
+        uint256 outTotal,
+        uint256 inTotal,
+        AgentApproval[] calldata approvals
+    ) private returns (uint256 netDebit) {
+        bytes32 mandateHash = activeMandateOf[member];
+        if (mandateHash == bytes32(0)) revert NoActiveMandate(member);
+        StandingMandate storage m = _mandates[mandateHash];
+        MandateState storage s = _mandateState[mandateHash];
+
+        _checkMandateLive(m, s, round.circleId);
+        _requireAgentApproval(roundHash, m.agent, approvals);
+        if (s.lastUsedAt != 0 && block.timestamp < uint256(s.lastUsedAt) + m.minCooldown) {
+            revert CooldownActive(member);
+        }
+        s.lastUsedAt = uint64(block.timestamp);
+        _checkDueDates(round, member, m.maxDueDays);
+
+        if (outTotal > inTotal) {
+            netDebit = outTotal - inTotal;
+            if (netDebit > m.maxNetDebitPerRound) revert ExceedsRoundCap(member);
+            if (s.spent + netDebit > m.totalCap) revert ExceedsTotalCap(member);
+            if (m.minClearRatioBps != 0 && outTotal * 10_000 < netDebit * m.minClearRatioBps) {
+                revert ClearRatioTooLow(member);
+            }
+            s.spent += netDebit;
+            token.safeTransferFrom(member, address(this), netDebit);
+        }
+        emit MandateUsed(mandateHash, roundHash, netDebit);
+    }
+
+    function _checkMandateLive(StandingMandate storage m, MandateState storage s, uint256 circleId) private view {
+        if (s.revoked || m.mandateNonce != memberMandateEpoch[m.member]) revert MandateRevoked(m.member);
+        if (block.timestamp >= m.expiry) revert MandateExpired(m.member);
+        if (m.circleId != circleId) revert MandateWrongCircle(m.member);
+    }
+
+    function _checkDueDates(RoundInput calldata round, address member, uint32 maxDueDays) private view {
+        uint256 latest = block.timestamp + uint256(maxDueDays) * 1 days;
+        for (uint256 i; i < round.invoiceIds.length; ++i) {
+            Invoice storage inv = _invoices[round.invoiceIds[i]];
+            if (inv.debtor == member && inv.dueDate > latest) revert InvoiceDueTooFar(round.invoiceIds[i]);
+        }
+    }
+
+    function _requireAgentApproval(bytes32 roundHash, address agent, AgentApproval[] calldata approvals)
+        private
+        view
+    {
+        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(AGENT_APPROVAL_TYPEHASH, roundHash, agent)));
+        for (uint256 i; i < approvals.length; ++i) {
+            if (approvals[i].agent == agent) {
+                _requireSig(agent, digest, approvals[i].signature);
+                return;
+            }
+        }
+        revert MissingAgentApproval(agent);
     }
 
     /// @dev Pulls a net debtor's debit with their EIP-3009 authorization, bound to this round.
@@ -633,6 +912,31 @@ contract SaldaClearing is EIP712, ReentrancyGuard {
                 token.safeTransfer(ledger.members[k], netCredit);
                 paid += netCredit;
             }
+        }
+    }
+
+    function _revokeMandate(bytes32 mandateHash, address member) private {
+        MandateState storage s = _mandateState[mandateHash];
+        if (s.revoked) revert MandateRevoked(member);
+        s.revoked = true;
+        emit MandateCancelled(mandateHash, member);
+        _bumpEpoch(member);
+    }
+
+    /// @dev The active mandate's nonce no longer matches, so it stops working at once.
+    function _bumpEpoch(address member) private {
+        uint64 epoch = ++memberMandateEpoch[member];
+        emit MandateEpochBumped(member, epoch);
+    }
+
+    /// @dev With a registry configured and a nonzero `agentId`, the agent key must own that ID. `settle()` never
+    ///      calls the registry, so a registry outage cannot block or change settlement.
+    function _checkAgentIdentity(address agent, uint256 agentId) private view {
+        if (agentId == 0 || address(agentRegistry) == address(0)) return;
+        try agentRegistry.ownerOf(agentId) returns (address owner) {
+            if (owner != agent) revert AgentNotRegistered();
+        } catch {
+            revert AgentNotRegistered();
         }
     }
 

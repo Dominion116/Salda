@@ -61,9 +61,11 @@ function CreateCircle() {
   const { me, setCircleId } = useSalda();
   const { data: current } = useCircle();
   const [name, setName] = useState("");
+  const [business, setBusiness] = useState("");
   const [error, setError] = useState<string>();
+  const [businessError, setBusinessError] = useState<string>();
   const create = useChange(
-    (client, circleName: string) => client.createCircle(circleName, me, nameIn(current)(me)),
+    (client, circleName: string, businessName: string) => client.createCircle(circleName, me, businessName),
     "Circle created. Add its members next.",
   );
 
@@ -75,15 +77,18 @@ function CreateCircle() {
       confirm="Sign and create circle"
       onOpen={() => {
         setName("");
+        const known = nameIn(current)(me);
+        setBusiness(known === "Unverified name" ? "" : known);
         setError(undefined);
+        setBusinessError(undefined);
       }}
       onConfirm={async () => {
         const trimmed = name.trim();
-        if (!trimmed) {
-          setError("Enter a name for the circle.");
-          return false;
-        }
-        const circle = await create.run(trimmed);
+        const businessName = business.trim();
+        setError(trimmed ? undefined : "Enter a name for the circle.");
+        setBusinessError(businessName ? undefined : "Enter your business name.");
+        if (!trimmed || !businessName) return false;
+        const circle = await create.run(trimmed, businessName);
         if (!circle) return false;
         setCircleId(circle.id);
       }}
@@ -96,6 +101,15 @@ function CreateCircle() {
         error={error}
         help="Only its hash is public."
         onChange={(event) => setName(event.currentTarget.value)}
+      />
+      <Field
+        label="Your business name"
+        autoComplete="organization"
+        maxLength={60}
+        value={business}
+        error={businessError}
+        help="Other members see it. Only its hash is public."
+        onChange={(event) => setBusiness(event.currentTarget.value)}
       />
     </ConfirmDialog>
   );

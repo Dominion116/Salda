@@ -3,7 +3,7 @@
 pragma solidity 0.8.24;
 
 import {console2} from "forge-std/console2.sol";
-import {IUSD8, SaldaClearing} from "../../src/SaldaClearing.sol";
+import {IAgentRegistry, IUSD8, SaldaClearing} from "../../src/SaldaClearing.sol";
 import {MockUSD8} from "../../src/mocks/MockUSD8.sol";
 import {SaldaBase} from "../SaldaBase.sol";
 
@@ -24,7 +24,7 @@ contract AevumForkTest is SaldaBase {
     function setUp() public override {
         if (block.chainid != 44005) vm.skip(true);
         usd = MockUSD8(TUSD8); // only DOMAIN_SEPARATOR and balanceOf are called on it here
-        salda = new SaldaClearing(IUSD8(TUSD8));
+        salda = new SaldaClearing(IUSD8(TUSD8), IAgentRegistry(address(0)));
         admin = _person("admin");
     }
 
@@ -83,7 +83,7 @@ contract AevumForkTest is SaldaBase {
         }
         SaldaClearing.ConsentInput[] memory consents = _consents(round);
         uint256 before = gasleft();
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
         console2.log("fork settle gas, 10 members / 30 invoices, real tUSD8:", before - gasleft());
 
         assertEq(IFiatToken(TUSD8).balanceOf(address(salda)), 0);

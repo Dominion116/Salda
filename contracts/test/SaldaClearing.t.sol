@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {console2} from "forge-std/console2.sol";
-import {SaldaClearing} from "../src/SaldaClearing.sol";
+import {IAgentRegistry, SaldaClearing} from "../src/SaldaClearing.sol";
 import {MockUSD8} from "../src/mocks/MockUSD8.sol";
 import {SaldaBase, SmartWallet} from "./SaldaBase.sol";
 
@@ -25,7 +25,7 @@ contract SaldaClearingTest is SaldaBase {
         vm.expectEmit(true, true, false, true, address(salda));
         emit SaldaClearing.RoundSettled(roundHash, circleId, relayer, 15 * ONE, 2 * ONE);
         vm.prank(relayer);
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
 
         assertEq(usd.balanceOf(ada), 0);
         assertEq(usd.balanceOf(ben), 1 * ONE);
@@ -75,9 +75,9 @@ contract SaldaClearingTest is SaldaBase {
     function test_settle_revertsOnReplay() public {
         (, SaldaClearing.RoundInput memory round) = _cycleRound();
         SaldaClearing.ConsentInput[] memory consents = _consents(round);
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
         vm.expectRevert(SaldaClearing.RoundAlreadySettled.selector);
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
     }
 
     function test_settle_consentsDoNotCarryToAnotherRound() public {
@@ -85,7 +85,7 @@ contract SaldaClearingTest is SaldaBase {
         SaldaClearing.ConsentInput[] memory consents = _consents(round);
         round.roundNonce = 99;
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.InvalidSignature.selector, consents[0].member));
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
     }
 
     function test_settle_revertsWhenExpired() public {
@@ -93,7 +93,7 @@ contract SaldaClearingTest is SaldaBase {
         SaldaClearing.ConsentInput[] memory consents = _consents(round);
         vm.warp(round.deadline + 1);
         vm.expectRevert(SaldaClearing.Expired.selector);
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
     }
 
     function test_settle_revertsWhenAnyConsentIsMissing() public {
@@ -104,13 +104,13 @@ contract SaldaClearingTest is SaldaBase {
         SaldaClearing.ConsentInput[] memory short = new SaldaClearing.ConsentInput[](2);
         (short[0], short[1]) = (consents[0], consents[1]);
         vm.expectRevert(SaldaClearing.ConsentCountMismatch.selector);
-        salda.settle(round, short);
+        salda.settle(round, short, noApprovals);
 
         // The right count, but one net-zero member's consent is replaced by a duplicate of another's.
         SaldaClearing.ConsentInput[] memory dup = new SaldaClearing.ConsentInput[](3);
         (dup[0], dup[1], dup[2]) = (consents[0], consents[1], consents[1]);
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.MissingConsent.selector, consents[2].member));
-        salda.settle(round, dup);
+        salda.settle(round, dup, noApprovals);
     }
 
     function test_settle_revertsOnWrongSigner() public {
@@ -118,7 +118,7 @@ contract SaldaClearingTest is SaldaBase {
         SaldaClearing.ConsentInput[] memory consents = _consents(round);
         consents[1].signature = consents[2].signature; // Ben's slot, Chidi's signature
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.InvalidSignature.selector, consents[1].member));
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
     }
 
     function test_settle_debtorAuthorizationMustMatchTheNetDebit() public {
@@ -132,7 +132,7 @@ contract SaldaClearingTest is SaldaBase {
         // Ada signed for 1.00, but the plan needs 2.00 from her.
         consents[0] = _debitConsent(ada, 1 * ONE, salda.hashRound(round), round.deadline);
         vm.expectRevert(MockUSD8.InvalidSignature.selector);
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
     }
 
     function test_settle_rejectsBadLines() public {
@@ -143,28 +143,28 @@ contract SaldaClearingTest is SaldaBase {
         SaldaClearing.ConsentInput[] memory none = new SaldaClearing.ConsentInput[](0);
 
         vm.expectRevert(SaldaClearing.InvoiceIdsNotAscending.selector);
-        salda.settle(_round(circleId, _ids(a, a, c), _ids(1, 1, 1)), none);
+        salda.settle(_round(circleId, _ids(a, a, c), _ids(1, 1, 1)), none, noApprovals);
 
         vm.expectRevert(SaldaClearing.InvoiceIdsNotAscending.selector);
-        salda.settle(_round(circleId, _ids(b, a, c), _ids(1, 1, 1)), none);
+        salda.settle(_round(circleId, _ids(b, a, c), _ids(1, 1, 1)), none, noApprovals);
 
         vm.expectRevert(SaldaClearing.ZeroClearAmount.selector);
-        salda.settle(_round(circleId, _ids(a, b, c), _ids(1, 0, 1)), none);
+        salda.settle(_round(circleId, _ids(a, b, c), _ids(1, 0, 1)), none, noApprovals);
 
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.OverClear.selector, c));
-        salda.settle(_round(circleId, _ids(a, b, c), _ids(1, 1, 4 * ONE + 1)), none);
+        salda.settle(_round(circleId, _ids(a, b, c), _ids(1, 1, 4 * ONE + 1)), none, noApprovals);
 
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.InvoiceNotFound.selector, c + 1));
-        salda.settle(_round(circleId, _ids(a, b, c + 1), _ids(1, 1, 1)), none);
+        salda.settle(_round(circleId, _ids(a, b, c + 1), _ids(1, 1, 1)), none, noApprovals);
 
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.WrongCircle.selector, a));
-        salda.settle(_round(circleId + 1, _ids(a, b, c), _ids(1, 1, 1)), none);
+        salda.settle(_round(circleId + 1, _ids(a, b, c), _ids(1, 1, 1)), none, noApprovals);
 
         vm.expectRevert(SaldaClearing.LengthMismatch.selector);
-        salda.settle(_round(circleId, _ids(a, b, c), new uint256[](2)), none);
+        salda.settle(_round(circleId, _ids(a, b, c), new uint256[](2)), none, noApprovals);
 
         vm.expectRevert(SaldaClearing.BadRoundSize.selector);
-        salda.settle(_round(circleId, new uint256[](0), new uint256[](0)), none);
+        salda.settle(_round(circleId, new uint256[](0), new uint256[](0)), none, noApprovals);
     }
 
     function test_settle_blacklistedMemberStopsTheWholeRound() public {
@@ -178,7 +178,7 @@ contract SaldaClearingTest is SaldaBase {
         usd.setBlacklisted(chidi, true);
 
         vm.expectRevert(abi.encodeWithSelector(MockUSD8.Blacklisted.selector, chidi));
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
         assertEq(salda.getInvoice(a).cleared, 0, "nothing clears");
         assertEq(usd.balanceOf(ada), 2 * ONE, "nothing moves");
     }
@@ -216,7 +216,7 @@ contract SaldaClearingTest is SaldaBase {
 
         vm.prank(relayer);
         uint256 before = gasleft();
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
         console2.log("settle gas, 10 members / 30 invoices:", before - gasleft());
 
         assertEq(usd.balanceOf(address(salda)), 0);
@@ -235,12 +235,12 @@ contract SaldaClearingTest is SaldaBase {
             amounts[i] = ONE;
         }
         vm.expectRevert(SaldaClearing.TooManyMembers.selector);
-        salda.settle(_round(circleId, ids, amounts), new SaldaClearing.ConsentInput[](0));
+        salda.settle(_round(circleId, ids, amounts), new SaldaClearing.ConsentInput[](0), noApprovals);
     }
 
     function test_settle_revertsOverThirtyInvoices() public {
         vm.expectRevert(SaldaClearing.BadRoundSize.selector);
-        salda.settle(_round(1, new uint256[](31), new uint256[](31)), new SaldaClearing.ConsentInput[](0));
+        salda.settle(_round(1, new uint256[](31), new uint256[](31)), new SaldaClearing.ConsentInput[](0), noApprovals);
     }
 
     /// Any plan on a small circle: cash is conserved, nobody's balance moves by more than their net position,
@@ -412,7 +412,7 @@ contract SaldaClearingTest is SaldaBase {
         uint256[] memory amounts = new uint256[](1);
         (ids[0], amounts[0]) = (a, ONE);
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.InvoiceVoidedAlready.selector, a));
-        salda.settle(_round(circleId, ids, amounts), new SaldaClearing.ConsentInput[](0));
+        salda.settle(_round(circleId, ids, amounts), new SaldaClearing.ConsentInput[](0), noApprovals);
     }
 
     function test_payDirect_paysTheCreditor_andCannotOverpay() public {
@@ -516,20 +516,20 @@ contract SaldaClearingTest is SaldaBase {
         (, SaldaClearing.RoundInput memory round) = _cycleRound();
         SaldaClearing.ConsentInput[] memory consents = _consents(round);
 
-        SaldaClearing other = new SaldaClearing(salda.token());
+        SaldaClearing other = new SaldaClearing(salda.token(), IAgentRegistry(address(0)));
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.InvoiceNotFound.selector, round.invoiceIds[0]));
-        other.settle(round, consents);
+        other.settle(round, consents, noApprovals);
 
         vm.chainId(1);
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.InvalidSignature.selector, consents[0].member));
-        salda.settle(round, consents);
+        salda.settle(round, consents, noApprovals);
     }
 
     function test_invoiceSignatureDoesNotCarryToAnotherDeployment() public {
         (address ada, address ben,, uint256 circleId) = _three();
         SaldaClearing.InvoiceInput memory inv = _inv(circleId, ada, ben, ONE);
         bytes32 digest = _saldaDigest(_invHash(inv));
-        SaldaClearing other = new SaldaClearing(salda.token());
+        SaldaClearing other = new SaldaClearing(salda.token(), IAgentRegistry(address(0)));
         vm.expectRevert(abi.encodeWithSelector(SaldaClearing.InvalidSignature.selector, ada));
         other.registerInvoice(inv, _sign(ada, digest), _sign(ben, digest));
     }

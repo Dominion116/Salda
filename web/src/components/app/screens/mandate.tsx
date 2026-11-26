@@ -105,7 +105,7 @@ function ActiveMandate({ mandate }: { mandate: Mandate }) {
 type Errors = Partial<Record<"round" | "total" | "days" | "ratio" | "hours" | "ends", string>>;
 
 function MandateForm() {
-  const { me, circleId } = useSalda();
+  const { me, circleId, client: current } = useSalda();
   const [round, setRound] = useState("2.00");
   const [total, setTotal] = useState("10.00");
   const [days, setDays] = useState("30");
@@ -116,7 +116,7 @@ function MandateForm() {
   const [review, setReview] = useState<MandateTerms | null>(null);
   const activate = useChange(
     (client, terms: MandateTerms) => client.activateMandate(terms),
-    "Mandate active. Sample data, nothing was sent.",
+    current.mode === "sample" ? "Mandate active. Sample data, nothing was sent." : "Mandate active. You can revoke it at any time.",
   );
 
   const read = (form: HTMLFormElement) => {

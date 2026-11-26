@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IUSD8, SaldaClearing} from "../src/SaldaClearing.sol";
+import {IAgentRegistry, IUSD8, SaldaClearing} from "../src/SaldaClearing.sol";
 import {MockUSD8} from "../src/mocks/MockUSD8.sol";
 
 /// @dev A minimal ERC-1271 smart wallet that accepts its owner's signature.
@@ -30,12 +30,15 @@ abstract contract SaldaBase is Test {
     address internal relayer = makeAddr("relayer");
     address internal admin;
 
+    /// @dev Rounds with manual consent only carry no agent approvals.
+    SaldaClearing.AgentApproval[] internal noApprovals;
+
     mapping(address account => uint256 key) internal keyOf;
     uint256 private _saltCounter;
 
     function setUp() public virtual {
         usd = new MockUSD8();
-        salda = new SaldaClearing(IUSD8(address(usd)));
+        salda = new SaldaClearing(IUSD8(address(usd)), IAgentRegistry(address(0)));
         admin = _person("admin");
     }
 
@@ -222,7 +225,7 @@ abstract contract SaldaBase is Test {
             keccak256(abi.encode(RECEIVE_TYPEHASH, member, address(salda), value, 0, validBefore, nonce));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", usd.DOMAIN_SEPARATOR(), structHash));
         return SaldaClearing.ConsentInput({
-            member: member, validAfter: 0, validBefore: validBefore, signature: _sign(member, digest)
+            member: member, kind: 0, validAfter: 0, validBefore: validBefore, signature: _sign(member, digest)
         });
     }
 
@@ -234,13 +237,13 @@ abstract contract SaldaBase is Test {
         bytes32 digest = _saldaDigest(
             keccak256(abi.encode(salda.APPROVE_ROUND_TYPEHASH(), roundHash, member, outTotal, inTotal))
         );
-        return SaldaClearing.ConsentInput({member: member, validAfter: 0, validBefore: 0, signature: _sign(member, digest)});
+        return SaldaClearing.ConsentInput({member: member, kind: 0, validAfter: 0, validBefore: 0, signature: _sign(member, digest)});
     }
 
     function _settle(SaldaClearing.RoundInput memory round) internal returns (bytes32) {
         SaldaClearing.ConsentInput[] memory consents = _consents(round);
         vm.prank(relayer);
-        return salda.settle(round, consents);
+        return salda.settle(round, consents, noApprovals);
     }
 
     function _ids(uint256 a, uint256 b, uint256 c) internal pure returns (uint256[] memory list) {

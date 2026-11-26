@@ -102,7 +102,9 @@ export type SaldaErrorCode =
   | "nothing-to-clear"
   | "mandate-already-active"
   | "not-ready"
-  | "not-supported-in-sample";
+  | "not-supported-in-sample"
+  /** A wallet, network or contract refusal. The message says what happened and what to do. */
+  | "refused";
 
 export class SaldaError extends Error {
   readonly code: SaldaErrorCode;
