@@ -12,7 +12,6 @@ next-env.d.ts
 .eslintcache
 
 # Foundry (contracts)
-contracts/lib/
 cache/
 broadcast/
 
