@@ -42,6 +42,18 @@
     outline: none;
   }
 
+  /*
+   * No visible scrollbars anywhere (a product decision). Everything still scrolls by wheel, touch, keyboard
+   * and trackpad; horizontally scrolling regions are focusable so the keyboard can reach them.
+   */
+  * {
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Clears the floating 56px navbar, its 16px top gap, and 16px more. */
   [id] {
     scroll-margin-top: 88px;
