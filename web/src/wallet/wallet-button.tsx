@@ -8,13 +8,20 @@ import { useToast } from "@/components/ui/toast";
 import { shortAddress } from "@/lib/format";
 import { aevum } from "./config";
 
-export function WalletButton() {
+/** Secondary in headers. Pass `primary` only where connecting is the main action of the view. */
+export function WalletButton({ primary = false }: { primary?: boolean }) {
   return (
     <ConnectButton.Custom>
       {({ account, chain, openAccountModal, openConnectModal, mounted }) => {
         // Keep the space until the wallet state is known, so the bar does not jump.
-        if (!mounted) return <span aria-hidden="true" className="skeleton h-8 w-32 rounded-control" />;
-        if (!account || !chain) return <Button variant="inverse" onClick={openConnectModal}>Connect wallet</Button>;
+        if (!mounted) return <span aria-hidden="true" className={primary ? "skeleton h-10 w-36 rounded-full" : "skeleton h-8 w-32 rounded-full"} />;
+        if (!account || !chain) {
+          return (
+            <Button variant={primary ? "primary" : "secondary"} size={primary ? "lg" : "md"} onClick={openConnectModal}>
+              Connect wallet
+            </Button>
+          );
+        }
         return (
           <Button onClick={openAccountModal} aria-label={`Wallet ${account.address}. Open wallet details`}>
             <span className="font-mono text-mono">{shortAddress(account.address)}</span>
@@ -34,7 +41,7 @@ export function NetworkBanner() {
   if (!isConnected || chainId === aevum.id) return null;
 
   return (
-    <div role="status" className="flex flex-wrap items-center gap-3 border-b border-hairline bg-warning-fill px-4 py-3 text-body-sm text-on-warning sm:px-6">
+    <div role="status" className="flex flex-wrap items-center gap-3 border-b border-hairline bg-warning-fill px-4 py-3 text-body-sm text-on-warning sm:px-6 lg:px-10">
       <AlertIcon className="shrink-0" />
       <p className="min-w-0 flex-1">Your wallet is on another network. Salda signs on {aevum.name} only.</p>
       <Button

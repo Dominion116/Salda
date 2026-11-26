@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { container } from "@/components/layout/container";
 import { ArrowDownIcon } from "@/components/ui/icons";
 import { cx } from "@/lib/cx";
 
@@ -31,7 +32,7 @@ export function DocShell({
   const current = outline.flatMap((group) => group.items).find((item) => item.id === active.section);
 
   return (
-    <div className="mx-auto w-full max-w-wide px-4 pt-10 pb-24 sm:px-6 lg:px-10 lg:pt-14">
+    <div className={cx(container, "pt-10 pb-24 lg:pt-14")}>
       <div
         className={cx(
           "grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-12",
@@ -58,8 +59,8 @@ export function DocShell({
 
         <article className="flex min-w-0 flex-col gap-10">
           <header className="flex flex-col gap-4 border-b border-hairline pb-10">
-            <h1 className="display-fluid max-w-[18ch] text-ink-strong">{title}</h1>
-            <div className="max-w-[68ch] text-body-lg text-pretty text-ink">{intro}</div>
+            <h1 className="max-w-[20ch] text-headline text-balance text-ink-strong lg:text-display-md">{title}</h1>
+            <div className="max-w-measure text-body-lg text-pretty text-ink">{intro}</div>
           </header>
           {children}
         </article>

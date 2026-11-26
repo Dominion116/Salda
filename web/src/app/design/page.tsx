@@ -194,7 +194,7 @@ export default function DesignPage() {
           </div>
         </Section>
 
-        <Section id="radius" title="Corners that agree" lede="10px controls, 12 to 16px cards and 24px landing page tiles. Pills are for small controls only.">
+        <Section id="radius" title="Corners that agree" lede="Every button is a pill. Fields are 10px, cards 12 to 16px and landing page tiles 24px.">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5 lg:gap-x-6">
             {radii.map((radius) => (
               <div key={radius.name} className="flex flex-col gap-4">

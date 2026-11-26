@@ -80,7 +80,7 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       <button
         type="button"
         aria-label="Dismiss notification"
-        className="hit-44 inline-flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-inverse-hover focus-visible:outline-on-inverse"
+        className="hit-44 inline-flex size-8 shrink-0 items-center justify-center rounded-full hover:bg-inverse-hover focus-visible:outline-on-inverse"
         onClick={() => onDismiss(toast.id)}
       >
         <CloseIcon />

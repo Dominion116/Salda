@@ -9,10 +9,10 @@ import { cx } from "@/lib/cx";
 
 export function H2({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <h2 id={id} className="group pt-4 text-headline text-ink-strong">
+    <h2 id={id} className="group pt-4 text-title-lg text-balance text-ink-strong lg:text-headline">
       <a href={`#${id}`} className="rounded-sm no-underline">
         {children}
-        <span aria-hidden="true" className="ps-2 text-ink-subtle opacity-0 group-hover:opacity-100">
+        <span aria-hidden="true" className="ps-2 text-ink-subtle opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
           #
         </span>
       </a>
@@ -22,27 +22,27 @@ export function H2({ id, children }: { id: string; children: ReactNode }) {
 
 export function H3({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <h3 id={id} className="pt-6 text-title text-ink-strong">
+    <h3 id={id} className="pt-6 text-title text-balance text-ink-strong">
       {children}
     </h3>
   );
 }
 
 export function P({ children, lead }: { children: ReactNode; lead?: boolean }) {
-  return <p className={cx("max-w-[68ch] text-pretty", lead ? "text-body-lg text-ink" : "text-body text-ink")}>{children}</p>;
+  return <p className={cx("max-w-measure text-pretty", lead ? "text-body-lg text-ink" : "text-body text-ink")}>{children}</p>;
 }
 
 export function List({ children, ordered }: { children: ReactNode; ordered?: boolean }) {
   const Tag = ordered ? "ol" : "ul";
   return (
-    <Tag className={cx("flex max-w-[68ch] flex-col gap-2 ps-5 text-body text-ink", ordered ? "list-decimal" : "list-disc")}>
+    <Tag className={cx("flex max-w-measure flex-col gap-2 ps-5 text-body text-ink", ordered ? "list-decimal" : "list-disc")}>
       {children}
     </Tag>
   );
 }
 
 export function Code({ children }: { children: ReactNode }) {
-  return <code className="rounded-xs bg-surface-2 px-1 py-0.5 font-mono text-[0.875em] text-ink-strong">{children}</code>;
+  return <code className="rounded-xs bg-surface-2 px-1 py-0.5 font-mono text-body-sm text-ink-strong">{children}</code>;
 }
 
 export function CodeBlock({ label, children }: { label: string; children: string }) {
@@ -52,7 +52,7 @@ export function CodeBlock({ label, children }: { label: string; children: string
       <pre
         tabIndex={0}
         aria-label={label}
-        className="overflow-x-auto rounded-lg bg-inverse p-4 font-mono text-[13px] leading-5 text-on-inverse -outline-offset-2"
+        className="overflow-x-auto rounded-lg bg-inverse p-4 font-mono text-body-sm text-on-inverse -outline-offset-2"
       >
         <code>{children.trim()}</code>
       </pre>
@@ -98,7 +98,7 @@ export function Table({ caption, head, rows }: { caption: string; head: readonly
 
 export function Note({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <aside className="flex max-w-[68ch] gap-3 rounded-lg bg-info-fill p-4 text-body-sm text-on-info">
+    <aside className="flex max-w-measure gap-3 rounded-lg bg-info-fill p-4 text-body-sm text-on-info">
       <AlertIcon className="mt-0.5 shrink-0" />
       <div className="flex flex-col gap-1">
         <p className="font-medium">{title}</p>

@@ -6,10 +6,11 @@ import { Letters } from "@/components/motion/words";
 import { buttonClass } from "@/components/ui/button-class";
 import { Badge } from "@/components/ui/data";
 import { cx } from "@/lib/cx";
+import { container } from "./container";
 import { MobileMenu } from "./mobile-menu";
 import { SkipLink } from "./skip-link";
 
-export const container = "mx-auto w-full max-w-page px-4 sm:px-6 lg:px-10";
+export { container };
 
 // Rooted at "/" so they also work from /docs and the legal pages. On the home page they just scroll.
 export const siteLinks = [
@@ -56,7 +57,7 @@ function SiteHeader() {
           </span>
           {/* On phones this lives at the bottom of the menu instead. */}
           <span className="max-md:hidden">
-            <Link href="/app" className={buttonClass({ size: "lg", pill: true })}>
+            <Link href="/app" className={buttonClass({ size: "lg" })}>
               Open the app
             </Link>
           </span>

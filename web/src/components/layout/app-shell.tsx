@@ -83,7 +83,7 @@ export function AppShell({
           </nav>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex min-h-14 flex-wrap items-center gap-3 border-b border-hairline px-4 py-2 @min-[768px]:px-6">
+          <div className="flex min-h-14 flex-wrap items-center gap-3 border-b border-hairline px-4 py-2 sm:px-6 lg:px-10">
             <p className="text-title-sm text-ink-strong">{title}</p>
             {mode === "sample" ? <Badge tone="info">Sample data</Badge> : null}
             {actions ? <div className="ms-auto flex flex-wrap items-center gap-3">{actions}</div> : null}

@@ -556,6 +556,7 @@ function TxLink({ hash }: { hash: `0x${string}` }) {
       className="inline-flex min-h-6 items-center gap-1 text-body-sm text-link underline underline-offset-4 hover:text-primary-hover"
     >
       View the transaction on the Aevum explorer
+      <span className="sr-only"> (opens in a new tab)</span>
       <ExternalIcon className="shrink-0" />
     </a>
   );

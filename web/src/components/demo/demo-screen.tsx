@@ -7,6 +7,7 @@ import type { Address } from "@/client/types";
 import { DebtGraph } from "@/components/app/debt-graph";
 import { KeyValues } from "@/components/app/parts";
 import { SaldaLogo } from "@/components/brand";
+import { container, pageY } from "@/components/layout/container";
 import { SkipLink } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { buttonClass } from "@/components/ui/button-class";
@@ -94,7 +95,7 @@ function Demo() {
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-(--z-sticky) border-b border-hairline bg-canvas">
-        <div className="mx-auto flex min-h-14 max-w-page flex-wrap items-center gap-3 px-4 py-2 sm:px-6">
+        <div className={cx(container, "flex min-h-14 flex-wrap items-center gap-3 py-2")}>
           <Link href="/" className="hit-44 flex items-center">
             <SaldaLogo priority />
           </Link>
@@ -109,7 +110,7 @@ function Demo() {
       </header>
       <NetworkBanner />
 
-      <main id="main" tabIndex={-1} className="mx-auto grid max-w-page gap-8 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-6 lg:py-12">
+      <main id="main" tabIndex={-1} className={cx(container, pageY, "grid gap-8 lg:grid-cols-12 lg:gap-6")}>
         <div className="lg:col-span-3">
           <p className="text-label text-ink-subtle">
             Step {index + 1} of {STAGES.length}
@@ -208,7 +209,7 @@ const titles: Record<Stage, string> = {
 };
 
 function Lede({ children }: { children: ReactNode }) {
-  return <p className="max-w-[64ch] pb-8 text-body-lg text-pretty text-ink">{children}</p>;
+  return <p className="max-w-measure pb-8 text-body-lg text-pretty text-ink">{children}</p>;
 }
 
 /** Before a real wallet prompt in the live demo. */
@@ -245,6 +246,7 @@ function TxLinks({ links }: { links: [string, `0x${string}` | undefined][] }) {
             className="inline-flex min-h-6 items-center gap-1 text-body-sm text-link underline underline-offset-4 hover:text-primary-hover"
           >
             {label}
+            <span className="sr-only"> (opens in a new tab)</span>
             <ExternalIcon className="shrink-0" />
           </a>
         </li>
@@ -286,7 +288,7 @@ function ConnectStage({
         <Panel heading="h2" title="With your wallet" description="Two signatures in total. Salda pays every network fee.">
           <div className="flex flex-col items-start gap-4">
             {!connected ? (
-              <WalletButton />
+              <WalletButton primary />
             ) : onAevum ? (
               <>
                 <p className="flex items-center gap-2 text-body-sm text-ink">

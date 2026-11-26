@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { nameIn, SaldaProvider, useCircle, useInvoices, usePendingInvoices, useRounds, useSalda } from "@/client/provider";
 import type { Address } from "@/client/types";
 import { AppShell } from "@/components/layout/app-shell";
+import { container, pageY } from "@/components/layout/container";
+import { cx } from "@/lib/cx";
 import { SkipLink } from "@/components/layout/skip-link";
 import { Select } from "@/components/ui/select";
 import { WalletProviders } from "@/wallet/providers";
@@ -92,7 +94,7 @@ function Frame({ children }: { children: ReactNode }) {
         </>
       }
     >
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-page p-4 sm:p-6">
+      <main id="main" tabIndex={-1} className={cx(container, pageY)}>
         {children}
       </main>
     </AppShell>

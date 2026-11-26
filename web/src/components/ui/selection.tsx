@@ -90,7 +90,7 @@ export function Segmented({ legend, options, defaultValue, value, onValueChange 
   return (
     <fieldset>
       <legend className="pb-2 text-label text-ink-strong">{legend}</legend>
-      <div className="inline-flex rounded-control bg-surface-2 p-0.5">
+      <div className="inline-flex rounded-full bg-surface-2 p-0.5">
         {options.map((option) => (
           <label key={option} className="hit-44">
             <input
@@ -102,7 +102,7 @@ export function Segmented({ legend, options, defaultValue, value, onValueChange 
                 : { defaultChecked: option === defaultValue })}
               className="peer sr-only"
             />
-            <span className="flex min-h-7 cursor-pointer items-center rounded-md px-3 text-button text-ink-subtle hover:text-ink-strong peer-checked:bg-canvas peer-checked:text-ink-strong peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary">
+            <span className="flex min-h-7 cursor-pointer items-center rounded-full px-3.5 text-button text-ink-subtle hover:text-ink-strong peer-checked:bg-canvas peer-checked:text-ink-strong peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary">
               {option}
             </span>
           </label>

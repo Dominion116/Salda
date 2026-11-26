@@ -12,10 +12,10 @@ import { shortAddress } from "@/lib/format";
 
 export function PageHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4 pb-6">
-      <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-title wrap-anywhere text-ink-strong">{title}</h1>
-        {description ? <p className="max-w-[64ch] text-body-sm text-pretty text-ink-subtle">{description}</p> : null}
+    <div className="flex flex-wrap items-end justify-between gap-4 pb-8">
+      <div className="flex min-w-0 flex-col gap-2">
+        <h1 className="text-headline text-balance wrap-anywhere text-ink-strong">{title}</h1>
+        {description ? <p className="max-w-measure text-body-sm text-pretty text-ink-subtle">{description}</p> : null}
       </div>
       {action ? <div className="flex flex-wrap gap-2">{action}</div> : null}
     </div>

@@ -41,7 +41,7 @@ export function IconButton({ label, type = "button", children, ...props }: IconB
     <button
       type={type}
       aria-label={label}
-      className="hit-44 inline-flex size-8 shrink-0 items-center justify-center rounded-control text-ink-subtle transition-[scale,background-color,color] duration-150 ease-out hover:bg-surface-2 hover:text-ink-strong motion-safe:active:scale-97"
+      className="hit-44 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-subtle transition-[scale,background-color,color] duration-150 ease-out hover:bg-surface-2 hover:text-ink-strong motion-safe:active:scale-97"
       {...props}
     >
       {children}
