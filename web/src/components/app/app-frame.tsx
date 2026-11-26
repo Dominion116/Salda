@@ -1,39 +1,23 @@
 "use client";
 
-import "@rainbow-me/rainbowkit/styles.css";
-
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
-import { WagmiProvider } from "wagmi";
+import type { ReactNode } from "react";
 import { nameIn, SaldaProvider, useCircle, useInvoices, usePendingInvoices, useRounds, useSalda } from "@/client/provider";
 import type { Address } from "@/client/types";
 import { AppShell } from "@/components/layout/app-shell";
 import { SkipLink } from "@/components/layout/skip-link";
 import { Select } from "@/components/ui/select";
-import { ToastProvider } from "@/components/ui/toast";
-import { aevum, wagmiConfig, walletTheme } from "@/wallet/config";
+import { WalletProviders } from "@/wallet/providers";
 import { NetworkBanner, WalletButton } from "@/wallet/wallet-button";
 
 export function AppFrame({ children }: { children: ReactNode }) {
-  const [queries] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } }),
-  );
-
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queries}>
-        <RainbowKitProvider theme={walletTheme} initialChain={aevum} modalSize="compact">
-          <ToastProvider>
-            <SaldaProvider>
-              <SkipLink />
-              <Frame>{children}</Frame>
-            </SaldaProvider>
-          </ToastProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <WalletProviders>
+      <SaldaProvider>
+        <SkipLink />
+        <Frame>{children}</Frame>
+      </SaldaProvider>
+    </WalletProviders>
   );
 }
 

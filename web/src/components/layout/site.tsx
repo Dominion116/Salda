@@ -82,6 +82,9 @@ function SiteFooter() {
           <h2 className="pb-4 text-body-sm font-medium text-ink-strong">Project</h2>
           <ul className="flex flex-col gap-3 pointer-coarse:gap-5">
             <li>
+              <Link href="/demo" className={linkClass}>Try the demo</Link>
+            </li>
+            <li>
               <Link href="/app" className={linkClass}>Open the app</Link>
             </li>
             <li>

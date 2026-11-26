@@ -478,7 +478,9 @@ export function Closing() {
         <Title id="closing-title" first="Start with three shops" rest="and see what two dollars can settle." />
         <div data-reveal-item style={delay(500)}>
           <Magnetic>
-            <ClearingLink />
+            <Link href="/demo" className={buttonClass({ variant: "primary", size: "xl" })}>
+              Try the demo
+            </Link>
           </Magnetic>
         </div>
       </Reveal>
