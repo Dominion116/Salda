@@ -25,7 +25,8 @@ import { buttonClass } from "@/components/ui/button-class";
 import { Amount, Badge, EmptyState, ErrorState, LoadingRows, Panel } from "@/components/ui/data";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
-import { CheckIcon, PlayIcon } from "@/components/ui/icons";
+import { CheckIcon, ExternalIcon, PlayIcon } from "@/components/ui/icons";
+import { txUrl } from "@/chain/salda";
 import { Slider } from "@/components/ui/slider";
 import { formatTime } from "@/lib/format";
 import { formatAmount, ONE, parseAmount } from "@/lib/money";
@@ -300,7 +301,8 @@ export function RoundScreen() {
 }
 
 function RoundDetail({ round, invoices, nameOf }: { round: Round; invoices: Invoice[]; nameOf: NameOf }) {
-  const { me } = useSalda();
+  const { me, client } = useSalda();
+  const sample = client.mode === "sample";
   const position = round.plan.positions.find((candidate) => candidate.member === me);
   const signed = round.approvedBy.includes(me);
   const ready = round.plan.positions.every((candidate) => round.approvedBy.includes(candidate.member));
@@ -308,10 +310,18 @@ function RoundDetail({ round, invoices, nameOf }: { round: Round; invoices: Invo
   const pays = position && position.out > position.in ? position.out - position.in : 0n;
   const receives = position && position.in > position.out ? position.in - position.out : 0n;
 
-  const approve = useChange((client) => client.approveRound(round.key, me), "Consent signed. Sample data, nothing was sent.");
+  const approve = useChange(
+    (client) => client.approveRound(round.key, me),
+    sample ? "Consent signed. Sample data, nothing was sent." : "Consent signed. Nothing moves until everyone signs.",
+  );
   const settle = useChange(
     (client) => client.settleRound(round.key),
-    (result) => (result.state === "confirmed" ? "Round settled. The receipt is ready." : undefined),
+    (result) =>
+      result.state === "confirmed"
+        ? "Round settled. The receipt is ready."
+        : result.state === "pending"
+          ? "Round sent. It is still confirming."
+          : undefined,
   );
 
   return (
@@ -368,6 +378,14 @@ function RoundDetail({ round, invoices, nameOf }: { round: Round; invoices: Invo
             </Panel>
           ) : null}
 
+          {round.state === "pending" || round.state === "submitting" ? (
+            <Panel heading="h2" title="Still confirming">
+              <div role="status" className="flex flex-col items-start gap-3 text-body-sm text-ink">
+                <p>The round was sent and is waiting for the network. This page updates when it confirms.</p>
+                {round.txHash ? <TxLink hash={round.txHash} /> : null}
+              </div>
+            </Panel>
+          ) : null}
           {round.state === "failed" ? (
             <Panel heading="h2" title="This round did not settle">
               <div className="flex flex-col items-start gap-4">
@@ -396,7 +414,7 @@ function RoundDetail({ round, invoices, nameOf }: { round: Round; invoices: Invo
                 </li>
               ))}
             </ul>
-            {waiting && !ready ? (
+            {waiting && !ready && sample ? (
               <p className="pt-3 text-caption text-ink-subtle">
                 Sample data: choose each business under “Viewing as” to sign for it.
               </p>
@@ -516,13 +534,29 @@ export function ReceiptScreen() {
                 <Summary plan={data.plan} nameOf={nameOf} />
               </Panel>
               {invoices.data ? <Lines plan={data.plan} invoices={invoices.data} nameOf={nameOf} /> : null}
-              <p className="text-body-sm text-ink-subtle">
-                {data.txHash ? "Settled on Aevum testnet." : "This is a sample round, so there is no transaction to view."}
-              </p>
+              {data.txHash ? (
+                <TxLink hash={data.txHash} />
+              ) : (
+                <p className="text-body-sm text-ink-subtle">This is a sample round, so there is no transaction to view.</p>
+              )}
             </div>
           </>
         )
       }
     </Loaded>
+  );
+}
+
+function TxLink({ hash }: { hash: `0x${string}` }) {
+  return (
+    <a
+      href={txUrl(hash)}
+      target="_blank"
+      rel="noopener"
+      className="inline-flex min-h-6 items-center gap-1 text-body-sm text-link underline underline-offset-4 hover:text-primary-hover"
+    >
+      View the transaction on the Aevum explorer
+      <ExternalIcon className="shrink-0" />
+    </a>
   );
 }

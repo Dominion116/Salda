@@ -7,8 +7,11 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useAccount, useWalletClient } from "wagmi";
+import { aevum, SALDA } from "@/chain/salda";
 import { useToast } from "@/components/ui/toast";
+import { createLiveClient } from "./live";
 import { createMockClient, SAMPLE_CIRCLE, sampleMembers } from "./mock";
 import { SaldaError, type Address, type Circle, type RoundPlan, type SaldaClient, type Units } from "./types";
 
@@ -25,16 +28,54 @@ type Session = {
 const SessionContext = createContext<Session | null>(null);
 const newSample = () => createMockClient({ latencyMs: 250 });
 
+/**
+ * Live data when Salda is deployed and a wallet is connected to Aevum; sample data otherwise, with its label.
+ * With live data, "me" is the connected wallet.
+ */
 export function SaldaProvider({ children }: { children: ReactNode }) {
   const queries = useQueryClient();
-  const [client, setClient] = useState(newSample);
+  const { address, chainId, isConnected } = useAccount();
+  const { data: wallet } = useWalletClient();
+  const [sample, setSample] = useState(newSample);
   const [circleId, setCircleId] = useState(SAMPLE_CIRCLE);
-  const [me, setMe] = useState<Address>(sampleMembers.ada);
+  const [sampleMe, setSampleMe] = useState<Address>(sampleMembers.ada);
+
+  const live = useMemo(
+    () =>
+      SALDA && isConnected && address && wallet && chainId === aevum.id
+        ? createLiveClient({ contract: SALDA, wallet, me: address })
+        : null,
+    [isConnected, address, wallet, chainId],
+  );
+  const client = live ?? sample;
+  const me = live && address ? address : sampleMe;
+  const setMe = useCallback((member: Address) => setSampleMe(member), []);
+
+  // Switching between sample and live data starts fresh, on the first circle this business belongs to.
+  useEffect(() => {
+    queries.removeQueries({ queryKey: ["salda"] });
+    if (!live) {
+      setCircleId(SAMPLE_CIRCLE);
+      return;
+    }
+    let cancelled = false;
+    live
+      .listCircles()
+      .then((circles) => {
+        if (!cancelled) setCircleId(circles[0]?.id ?? 0n);
+      })
+      .catch(() => {
+        if (!cancelled) setCircleId(0n);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [live, queries]);
 
   const resetSample = useCallback(() => {
-    setClient(newSample);
+    setSample(newSample);
     setCircleId(SAMPLE_CIRCLE);
-    setMe(sampleMembers.ada);
+    setSampleMe(sampleMembers.ada);
     queries.removeQueries({ queryKey: ["salda"] });
   }, [queries]);
 
@@ -74,7 +115,15 @@ export function useRounds() {
   const { circleId } = useSalda();
   return useRead(["rounds", `${circleId}`], (client) => client.listRounds(circleId));
 }
-export const useRound = (key: string) => useRead(["round", key], (client) => client.getRound(key));
+/** Checks again every few seconds while a round is being sent or confirmed, so the page updates by itself. */
+export function useRound(key: string) {
+  const { client } = useSalda();
+  return useQuery({
+    queryKey: ["salda", "round", key],
+    queryFn: () => client.getRound(key),
+    refetchInterval: (query) => (query.state.data?.state === "pending" || query.state.data?.state === "submitting" ? 4_000 : false),
+  });
+}
 export function useCashLimits() {
   const { circleId } = useSalda();
   return useRead(["cash", `${circleId}`], (client) => client.listCashLimits(circleId));

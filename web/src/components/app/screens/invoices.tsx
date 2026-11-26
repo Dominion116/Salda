@@ -268,7 +268,7 @@ function NewInvoiceForm({ circle }: { circle: Circle }) {
 export function CosignScreen() {
   const { key } = useParams<{ key: string }>();
   const router = useRouter();
-  const { me } = useSalda();
+  const { me, client } = useSalda();
   const circle = useCircle();
   const pending = usePendingInvoices();
   const show = useToast();
@@ -354,7 +354,9 @@ export function CosignScreen() {
               </div>
               {canSign ? null : (
                 <p className="text-body-sm text-ink-subtle">
-                  Sample data: choose {nameOf(other)} under “Viewing as” to sign for them.
+                  {client.mode === "sample"
+                    ? `Sample data: choose ${nameOf(other)} under “Viewing as” to sign for them.`
+                    : `Send this link to ${nameOf(other)}. They open it with their wallet to sign.`}
                 </p>
               )}
             </div>
@@ -404,7 +406,7 @@ export function InvoiceScreen() {
 }
 
 function InvoiceDetail({ invoice, circle, nameOf }: { invoice: Invoice; circle: Circle | undefined; nameOf: NameOf }) {
-  const { me } = useSalda();
+  const { me, client: current } = useSalda();
   const left = leftOf(invoice);
   const open = isOpen(invoice);
   const party = invoice.debtor === me || invoice.creditor === me;
@@ -413,7 +415,7 @@ function InvoiceDetail({ invoice, circle, nameOf }: { invoice: Invoice; circle: 
   const [error, setError] = useState<string>();
   const pay = useChange(
     (client, amount: bigint) => client.payInvoice(invoice.id, amount),
-    "Payment recorded. Sample data, nothing was sent.",
+    current.mode === "sample" ? "Payment recorded. Sample data, nothing was sent." : "Payment sent to the business you owe.",
   );
   const voiding = useChange(
     (client) => client.signVoid(invoice.id, me),

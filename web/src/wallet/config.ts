@@ -2,21 +2,11 @@
 
 import { connectorsForWallets, lightTheme, type Theme } from "@rainbow-me/rainbowkit";
 import { injectedWallet, metaMaskWallet, rabbyWallet, walletConnectWallet } from "@rainbow-me/rainbowkit/wallets";
-import { defineChain } from "viem";
 import { createConfig, http } from "wagmi";
+import { aevum } from "@/chain/salda";
 
-export const EXPLORER = "https://explorer-test.qday.info";
-export const TUSD8 = "0x456569838f1d43009A91ebA4263147Afd7233483";
-
-export const aevum = defineChain({
-  id: 44005,
-  name: "QDay Aevum Testnet",
-  nativeCurrency: { name: "tQDAY", symbol: "tQDAY", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc-test.qday.info"] } },
-  blockExplorers: { default: { name: "Aevum explorer", url: EXPLORER } },
-  contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
-  testnet: true,
-});
+// The chain lives in chain/salda.ts so server code can use it too.
+export { aevum, EXPLORER, TUSD8 } from "@/chain/salda";
 
 // Mobile wallets connect through WalletConnect, which needs a free project ID.
 // Without one, only wallets installed in the browser are offered.

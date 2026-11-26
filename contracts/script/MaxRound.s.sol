@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {IUSD8, SaldaClearing} from "../src/SaldaClearing.sol";
+import {IAgentRegistry, IUSD8, SaldaClearing} from "../src/SaldaClearing.sol";
 
 interface IFiatToken {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
@@ -49,7 +49,7 @@ contract MaxRound is Script {
 
         vm.startBroadcast(funderKey);
         address existing = vm.envOr("SALDA_ADDRESS", address(0));
-        SaldaClearing salda = existing == address(0) ? new SaldaClearing(IUSD8(TUSD8)) : SaldaClearing(existing);
+        SaldaClearing salda = existing == address(0) ? new SaldaClearing(IUSD8(TUSD8), IAgentRegistry(address(0))) : SaldaClearing(existing);
         uint256 circleId = salda.createCircle(keccak256("Salda max-size check"), members, _nameHashes());
 
         (uint256[] memory ids, uint256[] memory amounts) = _registerInvoices(salda, circleId);
@@ -64,7 +64,7 @@ contract MaxRound is Script {
         (uint256[] memory outs, uint256[] memory ins) = _totals(ids, amounts);
         uint256 totalDebit = _fundDebtors(token, funder, outs, ins);
         SaldaClearing.ConsentInput[] memory consents = _consents(salda, token, round, outs, ins);
-        bytes32 roundHash = salda.settle(round, consents);
+        bytes32 roundHash = salda.settle(round, consents, new SaldaClearing.AgentApproval[](0));
         vm.stopBroadcast();
 
         uint256 gross;
@@ -184,6 +184,7 @@ contract MaxRound is Script {
                 );
                 consents[k] = SaldaClearing.ConsentInput({
                     member: m,
+                    kind: 0,
                     validAfter: 0,
                     validBefore: round.deadline,
                     signature: _sign(keys[k], _digest(token.DOMAIN_SEPARATOR(), structHash))
@@ -193,6 +194,7 @@ contract MaxRound is Script {
                     keccak256(abi.encode(salda.APPROVE_ROUND_TYPEHASH(), roundHash, m, outs[k], ins[k]));
                 consents[k] = SaldaClearing.ConsentInput({
                     member: m,
+                    kind: 0,
                     validAfter: 0,
                     validBefore: 0,
                     signature: _sign(keys[k], _digest(salda.DOMAIN_SEPARATOR(), structHash))
