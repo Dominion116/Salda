@@ -1,11 +1,20 @@
-/** Three parties joined in a ring. Decorative beside the wordmark. */
-export function SaldaMark({ size = 20 }: { size?: number }) {
+import Image from "next/image";
+import { cx } from "@/lib/cx";
+
+/**
+ * The Salda wordmark. It names the link it sits in, so the image's alt text is the brand name.
+ * Source: public/brand/salda-logo.png (251 x 96, black on transparent), drawn 24 to 28px tall.
+ */
+export function SaldaLogo({ className, priority }: { className?: string; priority?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false" className="text-primary">
-      <path d="M10 4 16 15H4L10 4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle cx="10" cy="4" r="3" fill="currentColor" />
-      <circle cx="4" cy="15" r="3" fill="currentColor" />
-      <circle cx="16" cy="15" r="3" fill="currentColor" />
-    </svg>
+    <Image
+      src="/brand/salda-logo.png"
+      alt="Salda"
+      width={251}
+      height={96}
+      priority={priority}
+      unoptimized
+      className={cx("h-6 w-auto", className)}
+    />
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { SaldaMark } from "@/components/brand";
+import { SaldaLogo } from "@/components/brand";
 import { Badge } from "@/components/ui/data";
 import { cx } from "@/lib/cx";
 
@@ -60,9 +60,8 @@ export function AppShell({
             fill && "@min-[768px]:sticky @min-[768px]:top-0 @min-[768px]:h-dvh @min-[768px]:overflow-y-auto",
           )}
         >
-          <Link href="/" className="hit-44 flex h-14 shrink-0 items-center gap-2 px-4 text-title-sm text-ink-strong -outline-offset-2">
-            <SaldaMark />
-            Salda
+          <Link href="/" className="hit-44 flex h-14 shrink-0 items-center px-4 -outline-offset-2">
+            <SaldaLogo />
           </Link>
           <nav aria-label="App" className="flex flex-1 overflow-x-auto px-2 pb-2 @min-[768px]:flex-col @min-[768px]:justify-between">
             <ul className="flex gap-1 @min-[768px]:flex-col">

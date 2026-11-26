@@ -193,12 +193,14 @@
   }
 
   @supports (animation-timeline: scroll()) {
+    /* Runs along the navbar pill's bottom edge, inside its rounded ends. */
     .scroll-progress {
       display: block;
       position: absolute;
-      inset-inline: 0;
-      bottom: -1px;
+      inset-inline: 28px;
+      bottom: 0;
       height: 2px;
+      border-radius: 9999px;
       background: var(--color-ink-strong);
       transform-origin: left;
       animation: grow-x linear both;

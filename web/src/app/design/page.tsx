@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { SaldaMark } from "@/components/brand";
+import { SaldaLogo } from "@/components/brand";
 import { Gallery } from "@/components/design/gallery";
 import { MotionCurves } from "@/components/design/motion-curves";
 import { Swatch } from "@/components/design/swatch";
@@ -81,9 +81,8 @@ export default function DesignPage() {
 
       <header className="sticky top-0 z-(--z-sticky) border-b border-hairline bg-canvas">
         <div className="mx-auto flex h-14 max-w-page items-center gap-6 px-4 sm:px-6 lg:px-10">
-          <Link href="/" className="hit-44 flex shrink-0 items-center gap-2 text-title-sm text-ink-strong">
-            <SaldaMark />
-            Salda
+          <Link href="/" className="hit-44 flex shrink-0 items-center">
+            <SaldaLogo priority />
           </Link>
           <nav aria-label="Design system sections" className="min-w-0 flex-1 overflow-x-auto">
             <ul className="flex items-center lg:justify-end">

@@ -6,7 +6,7 @@ import { useAccount } from "wagmi";
 import type { Address } from "@/client/types";
 import { DebtGraph } from "@/components/app/debt-graph";
 import { KeyValues } from "@/components/app/parts";
-import { SaldaMark } from "@/components/brand";
+import { SaldaLogo } from "@/components/brand";
 import { SkipLink } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { buttonClass } from "@/components/ui/button-class";
@@ -95,9 +95,8 @@ function Demo() {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-(--z-sticky) border-b border-hairline bg-canvas">
         <div className="mx-auto flex min-h-14 max-w-page flex-wrap items-center gap-3 px-4 py-2 sm:px-6">
-          <Link href="/" className="hit-44 flex items-center gap-2 text-title-sm text-ink-strong">
-            <SaldaMark />
-            Salda
+          <Link href="/" className="hit-44 flex items-center">
+            <SaldaLogo priority />
           </Link>
           <Badge tone="info">Sample data</Badge>
           <div className="ms-auto flex items-center gap-3">
