@@ -94,7 +94,7 @@ export function Hero() {
   return (
     <div className={container}>
       {/* Plays on first paint, without waiting for scripts. */}
-      <div className="hero-enter flex flex-col items-center gap-6 pt-16 pb-12 text-center lg:pt-24">
+      <div className="hero-enter flex flex-col items-center gap-6 pt-20 pb-12 text-center lg:pt-28">
         <p data-hero-item style={delay(0)} className="rounded-full border border-hairline bg-canvas px-4 py-1.5 text-label text-ink">
           In development on Aevum testnet
         </p>

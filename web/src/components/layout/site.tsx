@@ -54,9 +54,12 @@ function SiteHeader() {
           <span className="max-sm:hidden">
             <Badge>Testnet</Badge>
           </span>
-          <Link href="/app" className={buttonClass({ size: "lg", pill: true })}>
-            Open the app
-          </Link>
+          {/* On phones this lives at the bottom of the menu instead. */}
+          <span className="max-md:hidden">
+            <Link href="/app" className={buttonClass({ size: "lg", pill: true })}>
+              Open the app
+            </Link>
+          </span>
           <MobileMenu links={siteLinks} />
         </div>
         <span aria-hidden="true" className="scroll-progress" />
