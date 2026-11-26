@@ -59,13 +59,11 @@ export function ClearingGraph() {
   const drawing = useRef<HTMLDivElement>(null);
   const touched = useRef(false);
   const story = useRef<{ timers: number[]; frame: number }>({ timers: [], frame: 0 });
-  const [playing, setPlaying] = useState(false);
 
   const stopStory = useCallback(() => {
     story.current.timers.forEach((timer) => window.clearTimeout(timer));
     cancelAnimationFrame(story.current.frame);
     story.current = { timers: [], frame: 0 };
-    setPlaying(false);
   }, []);
 
   const playStory = useCallback(() => {
@@ -76,7 +74,6 @@ export function ClearingGraph() {
       setTyped(formatAmount(MAX_CASH));
       return;
     }
-    setPlaying(true);
     setView("Before");
     setCash(0n);
     setTyped("0.00");
@@ -90,8 +87,7 @@ export function ClearingGraph() {
         const next = (BigInt(Math.round((eased * 200) / 5) * 5) * ONE) / 100n;
         setCash(next);
         setTyped(formatAmount(next));
-        if (t < 1) story.current.frame = requestAnimationFrame(step);
-        else setPlaying(false);
+        story.current.frame = t < 1 ? requestAnimationFrame(step) : 0;
       };
       story.current.frame = requestAnimationFrame(step);
     });
@@ -266,16 +262,16 @@ export function ClearingGraph() {
             }}
           />
           <div>
+            {/* Stays enabled while playing, so keyboard focus is never dropped; pressing it restarts. */}
             <Button
               variant="ghost"
               icon={<PlayIcon />}
-              disabled={playing}
               onClick={() => {
                 touched.current = false;
                 playStory();
               }}
             >
-              {playing ? "Playing…" : "Play it again"}
+              Play it again
             </Button>
           </div>
         </div>
@@ -330,19 +326,21 @@ export function ClearingGraph() {
             </tbody>
           </table>
         </div>
-        <dl className="bg-canvas text-body-sm lg:col-span-4 lg:col-start-9">
-          <div className="pb-3 text-label text-ink-strong">Who moves cash</div>
-          {people.map((person) => (
-            <div key={person.shop} className="flex min-h-10 items-center justify-between gap-4 border-t border-hairline">
-              <dt>
-                {shops[person.shop].short} {person.text}
-              </dt>
-              <dd>
-                <Amount value={formatAmount(after ? person.amount : 0n)} />
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <div className="bg-canvas text-body-sm lg:col-span-4 lg:col-start-9">
+          <p id={`${labelId}-movers`} className="pb-3 text-label text-ink-strong">Who moves cash</p>
+          <dl aria-labelledby={`${labelId}-movers`}>
+            {people.map((person) => (
+              <div key={person.shop} className="flex min-h-10 items-center justify-between gap-4 border-t border-hairline">
+                <dt>
+                  {shops[person.shop].short} {person.text}
+                </dt>
+                <dd>
+                  <Amount value={formatAmount(after ? person.amount : 0n)} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
     </div>
   );
