@@ -345,22 +345,33 @@ function Concepts() {
 
       <Section id="agent" title="The clearing agent">
         <P>
-          The agent plans rounds for circles whose members have mandates. It reads the circle, solves within every mandate’s
-          limits, and either settles the round, when every business in it has a mandate, or proposes it for the others to sign.
-          It runs on demand with <strong className="font-medium">Run clearing now</strong>, and once a day for circles that opt in.
+          The agent is a language model, <Code>openai/gpt-oss-120b</Code> on Groq, that plans rounds for circles whose members
+          have mandates. It works only through three tools: it reads the circle, runs Salda’s exact solver, and submits the
+          round. Salda then settles it, when every business in it has a mandate, or opens it for the others to sign. It runs on
+          demand with <strong className="font-medium">Run clearing now</strong>, and once a day for circles that opt in. Each
+          run shows the model’s name and every tool call it made.
         </P>
         <H3 id="agent-can">What it can and cannot do</H3>
         <List>
-          <li>It holds no money and cannot move any outside a round every business has agreed to.</li>
-          <li>Its only power is to approve rounds for mandates that name its key.</li>
-          <li>Each explanation it writes comes from a template filled with exact numbers. No language model is involved.</li>
+          <li>It does no arithmetic. Every amount comes from the solver, in exact whole units.</li>
+          <li>It holds no money and no keys. The server signs its approval only for a round that passed simulation.</li>
+          <li>It never sees a business name or wallet address: businesses appear to it as M1, M2 and so on.</li>
+          <li>Its only power is to approve rounds for mandates that name its key, and the contract refuses anything past a limit.</li>
+          <li>
+            If the model is down or busy, the rules-based agent runs instead, with the same solver and the same checks, and says
+            so.
+          </li>
         </List>
         <H3 id="compromised">Compromised agent demo</H3>
         <P>
-          The demo includes a <strong className="font-medium">Simulated compromised agent</strong>. You pick an attack: paying too
-          much for too little, going over the round limit, paying an invoice due in 90 days, or using a revoked mandate. The agent
-          signs that round, and it is simulated against the deployed contract, which refuses it with the exact error. Nothing is
-          ever sent, so 0.00 moves.
+          The demo shows two kinds of attack. In the <strong className="font-medium">simulated compromised agent</strong>, you
+          pick a bad round: paying too much for too little, going over the round limit, paying an invoice due in 90 days, or using
+          a revoked mandate. The agent signs it and the contract refuses it with the exact error.
+        </P>
+        <P>
+          In the <strong className="font-medium">live prompt injection</strong>, the real model plans a round while one invoice
+          carries a note telling it to ignore the mandate. Whether the model resists or is fooled, its round is simulated against
+          the deployed contract, which refuses anything past a limit. Neither demo ever sends a transaction, so 0.00 moves.
         </P>
       </Section>
     </>
@@ -403,7 +414,7 @@ function Guides() {
           </li>
           <li>Move the cash slider and watch 0.12, 0.14, then 0.15 clear.</li>
           <li>Sign the round. It settles with one transaction, and the receipt links to the explorer.</li>
-          <li>Try the safety checks against the simulated compromised agent.</li>
+          <li>Try the safety checks: the simulated compromised agent, and a live prompt injection against the real AI agent.</li>
         </List>
         <H3 id="demo-scale">Why 1/100 scale</H3>
         <P>
@@ -616,7 +627,8 @@ POST /api/store
         <H3 id="api-demo">Demo</H3>
         <P>
           <Code>POST /api/demo</Code> runs one step of the judge demo: <Code>start</Code>, <Code>register</Code>,{" "}
-          <Code>settle</Code>, or <Code>attack</Code> for the simulated compromised agent. <Code>GET /api/demo</Code> says
+          <Code>settle</Code>, <Code>attack</Code> for the simulated compromised agent, or <Code>inject</Code> for the live prompt
+          injection. <Code>GET /api/demo</Code> says
           whether the live demo is available.
         </P>
         <H3 id="api-limits">Rate limits</H3>
@@ -657,6 +669,9 @@ POST /api/store
             [<Code key="14">UPSTASH_REDIS_REST_TOKEN</Code>, "The shared store’s token", "On Vercel", "Yes"],
             [<Code key="15">TRUSTED_IP_HEADER</Code>, "Header with the real visitor address. x-vercel-forwarded-for on Vercel", "On Vercel", "No"],
             [<Code key="16">RELAYER_DAILY_TX_LIMIT</Code>, "Most relayed transactions a day. Default 500", "No", "No"],
+            [<Code key="17">GROQ_API_KEY</Code>, "Turns on the AI agent. Without it, the rules-based agent runs", "For the AI agent", "Yes"],
+            [<Code key="18">GROQ_MODEL</Code>, "The model on Groq. Default openai/gpt-oss-120b", "No", "No"],
+            [<Code key="19">AI_DAILY_LIMIT</Code>, "Most AI agent runs a day, across everyone. Default 300", "No", "No"],
           ]}
         />
       </Section>

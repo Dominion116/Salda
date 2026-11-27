@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { nameIn, useAgentEvents, useChange, useCircle, useMandates, useSalda } from "@/client/provider";
 import type { AgentEvent, Circle } from "@/client/types";
+import { AgentSteps } from "@/components/app/agent-steps";
 import { KeyValues, Loaded, PageHeader } from "@/components/app/parts";
 import { Button } from "@/components/ui/button";
 import { buttonClass } from "@/components/ui/button-class";
@@ -36,7 +37,7 @@ export function AgentScreen() {
     <>
       <PageHeader
         title="Agent"
-        description="Plans rounds and agrees for members who set a mandate. It holds no money and can’t go past anyone’s limits."
+        description="An AI agent plans rounds and agrees for members who set a mandate. It holds no money, and the contract refuses anything past anyone’s limits."
         action={runButton}
       />
       <div className="grid gap-6 xl:grid-cols-12">
@@ -64,6 +65,10 @@ export function AgentScreen() {
                           <span className="text-caption text-ink-subtle">{formatTime(event.at)}</span>
                         </span>
                         <span className="text-ink-strong">{event.summary}</span>
+                        {event.model ? (
+                          <span className="text-caption text-ink-subtle">Planned by the AI agent ({event.model} on Groq)</span>
+                        ) : null}
+                        {event.steps?.length ? <AgentSteps steps={event.steps} model={event.model} /> : null}
                       </li>
                     ))}
                   </ol>

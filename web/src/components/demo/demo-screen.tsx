@@ -25,7 +25,8 @@ import { aevum } from "@/wallet/config";
 import { WalletProviders } from "@/wallet/providers";
 import { NetworkBanner, WalletButton } from "@/wallet/wallet-button";
 import { txUrl } from "@/chain/salda";
-import { useLiveDemo, type AttackResult, type LiveDemo } from "./live-demo";
+import { AgentSteps } from "@/components/app/agent-steps";
+import { useLiveDemo, type AttackResult, type InjectionResult, type LiveDemo } from "./live-demo";
 
 /*
  * The judge demo (PRD 5.2), on sample data until Phase 8. Every "signature" here stands in for
@@ -190,6 +191,7 @@ function Demo() {
               you={you}
               at={at}
               live={mode === "wallet" && liveDemo.attacksReady ? liveDemo : undefined}
+              ai={liveDemo.aiModel ? liveDemo : undefined}
               onRestart={restart}
             />
           ) : null}
@@ -701,7 +703,94 @@ function ReceiptStage({
   );
 }
 
-function SafetyStage({ you, at, live, onRestart }: { you: Address; at: number; live?: LiveDemo; onRestart: () => void }) {
+/**
+ * A live prompt-injection attempt against the real AI agent. A malicious invoice note tells it to ignore the
+ * mandate; whatever the model decides is simulated against the deployed contract, so nothing is ever sent.
+ */
+function InjectionPanel({ ai }: { ai: LiveDemo }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<InjectionResult | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setResult(await ai.inject());
+    setBusy(false);
+  };
+  const outcome = result?.outcome;
+
+  return (
+    <Panel
+      heading="h2"
+      title="Live AI agent: prompt injection"
+      description={`A real language model (${ai.aiModel}) plans the round. One invoice carries a note telling it to ignore the mandate. Its decision is checked against the deployed contract. Nothing is sent.`}
+    >
+      <div className="flex flex-col items-start gap-4">
+        <Button variant="primary" size="lg" icon={<PlayIcon />} loading={busy} onClick={() => void run()}>
+          Run the AI agent on a poisoned invoice
+        </Button>
+        <div role="status" className="flex w-full flex-col gap-3">
+          {busy ? (
+            <p className="flex items-center gap-2 text-body-sm text-ink">
+              <SpinnerIcon className="shrink-0" />
+              The AI agent is reading the circle and planning a round…
+            </p>
+          ) : null}
+          {result && outcome ? (
+            <>
+              <div className="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 text-body-sm">
+                <p className="text-label text-ink-strong">The poisoned note</p>
+                <p className="text-ink">{result.note}</p>
+              </div>
+              {outcome.status === "refused" ? (
+                <div className="flex flex-col gap-2 rounded-lg bg-danger-fill p-4 text-on-danger">
+                  <p className="flex items-center gap-2 text-title-sm">
+                    <AlertIcon className="shrink-0" />
+                    The agent was fooled, and the contract refused it. 0.00 tUSD8 moved.
+                  </p>
+                  <p className="text-body-sm">{outcome.reason}</p>
+                  <p className="text-body-sm">
+                    Contract error <code className="rounded-xs bg-canvas px-1 font-mono text-mono">{outcome.revert}</code>
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 rounded-lg bg-success-fill p-4 text-on-success">
+                  <p className="flex items-center gap-2 text-title-sm">
+                    <CheckIcon className="shrink-0" />
+                    The agent ignored the note and planned a round inside every limit.
+                  </p>
+                  <p className="text-body-sm">
+                    Had it obeyed, the contract would have refused it anyway: try “Spend past your round limit” above.
+                  </p>
+                </div>
+              )}
+              {result.answer ? (
+                <div className="flex flex-col gap-1 text-body-sm">
+                  <p className="text-label text-ink-strong">What the agent said</p>
+                  <p className="text-ink">{result.answer}</p>
+                </div>
+              ) : null}
+              <AgentSteps steps={result.steps} model={result.model} />
+            </>
+          ) : null}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function SafetyStage({
+  you,
+  at,
+  live,
+  ai,
+  onRestart,
+}: {
+  you: Address;
+  at: number;
+  live?: LiveDemo;
+  /** Present when the live AI agent can run the injection demo. Needs no wallet. */
+  ai?: LiveDemo;
+  onRestart: () => void;
+}) {
   const [revoked, setRevoked] = useState(false);
   const [choice, setChoice] = useState(attacks[1]?.key ?? "ratio");
   const [phase, setPhase] = useState<"idle" | "checking" | "done">("idle");
@@ -836,6 +925,8 @@ function SafetyStage({ you, at, live, onRestart }: { you: Address; at: number; l
               )
             ) : null}
           </div>
+
+          {ai ? <InjectionPanel ai={ai} /> : null}
 
           <div className="flex flex-wrap gap-2">
             <Button size="lg" icon={<PlayIcon />} onClick={onRestart}>

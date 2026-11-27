@@ -17,7 +17,16 @@ import { hashAll, hashSet, lock, unlock } from "./store";
  * Explanations come from templates and exact solver numbers. No language model is involved.
  */
 
-export type AgentEvent = { key: string; at: number; circleId: bigint; kind: "proposed" | "settled" | "rejected"; summary: string };
+export type AgentEvent = {
+  key: string;
+  at: number;
+  circleId: bigint;
+  kind: "proposed" | "settled" | "rejected";
+  summary: string;
+  /** Set when the AI agent planned it. */
+  model?: string;
+  steps?: { tool: string; input: string; output: string }[];
+};
 
 const DAY = 86_400;
 const eventsKey = (circleId: bigint) => `events:${circleId}`;
@@ -32,8 +41,13 @@ export async function listEvents(circleId: bigint): Promise<AgentEvent[]> {
   return [...all.values()].map((value) => fromWire<AgentEvent>(value)).sort((a, b) => b.at - a.at).slice(0, 50);
 }
 
-async function log(circleId: bigint, kind: AgentEvent["kind"], summary: string): Promise<AgentEvent> {
-  const event: AgentEvent = { key: randomHex32().slice(0, 18), at: Number(nowSeconds()), circleId, kind, summary };
+export async function log(
+  circleId: bigint,
+  kind: AgentEvent["kind"],
+  summary: string,
+  extra: Pick<AgentEvent, "model" | "steps"> = {},
+): Promise<AgentEvent> {
+  const event: AgentEvent = { key: randomHex32().slice(0, 18), at: Number(nowSeconds()), circleId, kind, summary, ...extra };
   await hashSet(eventsKey(circleId), event.key, toWire(event), 30 * DAY);
   return event;
 }

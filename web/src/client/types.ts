@@ -85,12 +85,18 @@ export type MandateTerms = {
 
 export type Mandate = MandateTerms & { hash: Hex; spent: Units; state: "active" | "revoked" | "expired" };
 
+/** One tool call the AI agent made, as shown to members: what it asked for and what came back. */
+export type AgentStep = { tool: string; input: string; output: string };
+
 export type AgentEvent = {
   key: string;
   at: Seconds;
   circleId: bigint;
   kind: "proposed" | "settled" | "rejected";
   summary: string;
+  /** The language model that planned it, when the AI agent ran. Absent for the rules-based agent. */
+  model?: string;
+  steps?: AgentStep[];
 };
 
 export type SaldaErrorCode =

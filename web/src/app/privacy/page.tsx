@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "What Salda’s website and testnet service collect, why, how long they keep it, and what is public onchain.",
 };
 
-const UPDATED = "November 26, 2026";
+const UPDATED = "November 27, 2026";
 
 const outline: OutlineGroup[] = [
   {
@@ -98,7 +98,11 @@ export default function PrivacyPage() {
             <li>To keep the free relayer and demo tokens from being abused, using rate limits.</li>
             <li>To fix problems, using short-lived error logs that do not include names, salts or signatures.</li>
           </List>
-          <P>We do not use your information for advertising, profiling or training models.</P>
+          <P>
+            When the AI agent plans a round, the circle data it needs is sent to Groq, which runs the language model, as listed
+            under Services we rely on. We do not use your information for advertising or profiling, and we do not use it to train
+            models.
+          </P>
         </Section>
 
         <Section id="keep" title="How long we keep it">
@@ -115,6 +119,10 @@ export default function PrivacyPage() {
             rows={[
               ["Vercel (hosting)", "Standard request information, such as your network address and browser, in its logs"],
               ["Upstash (the store)", "The information listed under What we collect"],
+              [
+                "Groq (the AI agent’s model)",
+                "When the AI agent plans a round: the circle’s open invoices, amounts, due dates, invoice notes and mandate limits, with businesses shown only as M1, M2 and so on. Never names, wallet addresses or keys",
+              ],
               ["QDay Aevum testnet RPC", "The onchain reads and transactions your browser and our server send"],
               ["WalletConnect by Reown", "Connection details, only if you connect a phone wallet through it"],
               ["Your wallet provider", "Whatever its own policy covers. We never see your private keys"],

@@ -55,7 +55,7 @@ Salda looks at every open invoice in the group, finds the debts that cancel out,
 - ✅ **All-or-nothing settlement.** One transaction; the contract rechecks every line and every consent, and never keeps any money.
 - ✅ **Gasless for members.** Members only sign; a relayer submits and pays the fee, and anyone can submit the same signatures instead.
 - ✅ **Standing mandates.** Sign once with limits (per round, total, due date, minimum clear ratio, cooldown, expiry); revoke instantly, with no gas.
-- ✅ **Untrusted clearing agent.** Plans and settles rounds within mandates, with plain-language explanations. A compromised agent is refused by the contract.
+- ✅ **AI clearing agent, kept on a leash.** A language model (`openai/gpt-oss-120b` on Groq) plans rounds through three tools: read the circle, run the exact solver, submit. It does no arithmetic, holds no keys, never sees names or addresses, and the contract refuses anything past a mandate. A live prompt-injection demo shows it.
 - ✅ **Private names.** Business names, circle names and invoice documents go onchain only as salted hashes.
 - ✅ **Live on Aevum.** Deployed at `0x25B0746b1C7DDb7D585855eE03bF7589A14cB5FA`, with explorer proofs of a full-scale round, a 10-member 30-invoice round, and two rounds the contract refused (see [Deployment](#deployment)).
 
@@ -286,14 +286,14 @@ Holds items waiting for another person. Every signature is verified before it is
 
 | Request | Returns or does |
 |---|---|
-| `GET ?info=1` | `{ "agent": "0x…", "agentId": {"$bigint": "0"} }` |
+| `GET ?info=1` | `{ "agent": "0x…", "agentId": {"$bigint": "0"}, "model": "openai/gpt-oss-120b" }` |
 | `GET ?circleId=1` | Recent activity: `[{ "kind": "settled", "summary": "Round settled: 15.00 cleared with 2.00 tUSD8. …" }]` |
 | `POST {"circleId": {"$bigint": "1"}}` | Runs clearing now |
 | `GET ?cron=1` with `Authorization: Bearer $CRON_SECRET` | The daily scheduled run ([`web/vercel.json`](web/vercel.json)) |
 
 ### `/api/demo`
 
-`POST` with `action`: `start` (`player`), `register` (`circleId`, `signature`), `settle` (`circleId`, `round`, `consent`), or `attack` (`attack`: `fair` \| `ratio` \| `cap` \| `due`, `revoked`). The attack response is `{ "refused": true, "revert": "ClearRatioTooLow", "message": "…", "moved": "0.00" }`.
+`POST` with `action`: `start` (`player`), `register` (`circleId`, `signature`), `settle` (`circleId`, `round`, `consent`), or `attack` (`attack`: `fair` \| `ratio` \| `cap` \| `due`, `revoked`). The attack response is `{ "refused": true, "revert": "ClearRatioTooLow", "message": "…", "moved": "0.00" }`. Action `inject` runs the real AI agent on the demo circle with a malicious invoice note and returns `{ model, note, answer, steps, outcome }`; its round is only simulated, never sent.
 
 ### Rate limits
 
@@ -327,6 +327,9 @@ Template: [`web/.env.example`](web/.env.example). Use fresh **test-only** wallet
 | `UPSTASH_REDIS_REST_TOKEN` | Shared store token | `AX…` | On Vercel | **Yes** |
 | `TRUSTED_IP_HEADER` | Real client IP header | `x-vercel-forwarded-for` | On Vercel | No |
 | `RELAYER_DAILY_TX_LIMIT` | Relayed tx per day | `500` | No | No |
+| `GROQ_API_KEY` | Turns on the AI agent; without it the rules-based agent runs | `gsk_…` | For the AI agent | **Yes** |
+| `GROQ_MODEL` | Model on Groq | `openai/gpt-oss-120b` | No | No |
+| `AI_DAILY_LIMIT` | AI agent runs per day, everyone | `300` | No | No |
 
 ### Contracts (`contracts/.env`)
 
@@ -396,6 +399,7 @@ npm run build
 | **EIP-712** | Every Salda signature: invoices, batches, voids, round approvals, mandates, agent approvals, revokes |
 | **Multicall3** | Batched reads of circle membership |
 | **Scoped agent key** | Holds nothing; its `AgentApproval` is required for mandate consent, and only within each mandate’s limits |
+| **AI agent (Groq)** | `openai/gpt-oss-120b` chooses the tool calls (`get_circle`, `plan_round`, `submit_round`) through Groq’s OpenAI-compatible API. Amounts come only from the solver, `submit_round` simulates `settle()` before anything is sent, and invoice notes are treated as untrusted. Falls back to the rules-based agent when the model is unavailable |
 | **ERC-8004** | Optional: with a registry set, activation requires the agent key to own `agentId`. `settle()` never calls it |
 | **Shanghai EVM** | Solidity 0.8.24, `evm_version = "shanghai"`, checked by `tools/check-shanghai.mjs` |
 

@@ -31,10 +31,23 @@ type Started = { circleId: bigint; invoices: InvoiceInput[]; deadline: bigint; b
 type Registered = { registerTx?: Hex; seedTx?: Hex; invoiceIds: bigint[]; seeded: boolean };
 export type AttackResult = { refused: boolean; revert: string | null; message: string; moved: string };
 
+/** A live prompt-injection attempt against the real AI agent. Simulated against the contract; never sent. */
+export type InjectionResult = {
+  model: string;
+  note: string;
+  answer: string;
+  steps: { tool: string; input: string; output: string }[];
+  outcome:
+    | { status: "would_settle" | "nothing" | "settled" | "proposed" }
+    | { status: "refused"; revert: string; reason: string };
+};
+
 export type LiveDemo = {
   /** True when the server can run the live demo and the wallet is on Aevum. */
   ready: boolean;
   attacksReady: boolean;
+  /** The model name when the live AI agent is available for the injection demo. */
+  aiModel: string | null;
   /** Setup steps finished so far (-1 for none), and the error that stopped them. */
   startDone: number;
   settleDone: number;
@@ -45,13 +58,18 @@ export type LiveDemo = {
   start: () => Promise<boolean>;
   settle: (cash: bigint) => Promise<boolean>;
   attack: (attack: string, revoked: boolean) => Promise<AttackResult | null>;
+  inject: () => Promise<InjectionResult | null>;
   reset: () => void;
 };
 
 export function useLiveDemo(): LiveDemo {
   const { address, chainId } = useAccount();
   const { data: wallet } = useWalletClient();
-  const [available, setAvailable] = useState({ live: false, attacks: false });
+  const [available, setAvailable] = useState<{ live: boolean; attacks: boolean; ai: string | null }>({
+    live: false,
+    attacks: false,
+    ai: null,
+  });
   const [session, setSession] = useState<Started | null>(null);
   const [ids, setIds] = useState<bigint[]>([]);
   const [startDone, setStartDone] = useState(-1);
@@ -62,9 +80,9 @@ export function useLiveDemo(): LiveDemo {
   const [settled, setSettled] = useState<RoundRecord | null>(null);
 
   useEffect(() => {
-    callApi<{ live: boolean; attacks: boolean }>("/api/demo")
-      .then(setAvailable)
-      .catch(() => setAvailable({ live: false, attacks: false }));
+    callApi<{ live: boolean; attacks: boolean; ai?: string | null }>("/api/demo")
+      .then((found) => setAvailable({ live: found.live, attacks: found.attacks, ai: found.ai ?? null }))
+      .catch(() => setAvailable({ live: false, attacks: false, ai: null }));
   }, []);
 
   const ready = Boolean(SALDA && available.live && address && wallet && chainId === aevum.id);
@@ -169,9 +187,21 @@ export function useLiveDemo(): LiveDemo {
     }
   };
 
+  const inject = async () => {
+    setError(null);
+    try {
+      return await callApi<InjectionResult>("/api/demo", { action: "inject" });
+    } catch (failure) {
+      setError(explain(failure));
+      return null;
+    }
+  };
+
   return {
     ready,
     attacksReady: available.attacks,
+    aiModel: available.ai,
+    inject,
     startDone,
     settleDone,
     error,
