@@ -354,7 +354,7 @@ contract MandatesTest is SaldaBase {
         address[] memory members = new address[](2);
         (members[0], members[1]) = (ada, ben);
         uint256 otherCircle = _circle(members);
-        uint256 otherInvoice = _register(_inv(otherCircle, ben, ada, ONE));
+        uint256 otherInvoice = _register(_inv(otherCircle, ada, ben, ONE));
         uint256[] memory one = new uint256[](1);
         uint256[] memory amount = new uint256[](1);
         (one[0], amount[0]) = (otherInvoice, ONE);

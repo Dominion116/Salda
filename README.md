@@ -57,7 +57,7 @@ Salda looks at every open invoice in the group, finds the debts that cancel out,
 - ✅ **Standing mandates.** Sign once with limits (per round, total, due date, minimum clear ratio, cooldown, expiry); revoke instantly, with no gas.
 - ✅ **Untrusted clearing agent.** Plans and settles rounds within mandates, with plain-language explanations. A compromised agent is refused by the contract.
 - ✅ **Private names.** Business names, circle names and invoice documents go onchain only as salted hashes.
-- 🚧 **Live on Aevum.** Contract written and compiled; deployment, the explorer proofs and the test runs are in progress (see [Deployment](#deployment)).
+- ✅ **Live on Aevum.** Deployed at `0x25B0746b1C7DDb7D585855eE03bF7589A14cB5FA`, with explorer proofs of a full-scale round, a 10-member 30-invoice round, and two rounds the contract refused (see [Deployment](#deployment)).
 
 ## Quick start
 
@@ -350,19 +350,22 @@ The Aevum explorer cannot verify contract source, so the exact deployment is pub
 
 | Item | Value |
 |---|---|
-| `SaldaClearing` | _Published after deployment_ |
+| `SaldaClearing` | [`0x25B0746b1C7DDb7D585855eE03bF7589A14cB5FA`](https://explorer-test.qday.info/address/0x25B0746b1C7DDb7D585855eE03bF7589A14cB5FA), deployed at block 4,214,682 ([tx](https://explorer-test.qday.info/tx/0xa00971afdda042c44740b7f082b1dd15a91844137af95d0609636c520d49a0b3)) |
 | Constructor | `token = 0x456569838f1d43009A91ebA4263147Afd7233483` (tUSD8), `agentRegistry = 0x0000000000000000000000000000000000000000` (off until the registry is confirmed) |
-| Source commit | _Published after deployment_ |
+| Source commit | [`ae3d90e`](https://github.com/Dominion116/Salda/tree/ae3d90ee52511ddc561f305387643af278250295/contracts/src), the last change to `contracts/src/SaldaClearing.sol`. Solidity 0.8.24, Shanghai, optimizer 200 runs |
 | ABI | [`web/src/chain/abi.ts`](web/src/chain/abi.ts), generated from `contracts/out` |
 
 ### Explorer proofs
 
-| Proof | Transaction |
-|---|---|
-| Full-scale round: 15.00 cleared with 2.00 | _Pending_ |
-| Rejected agent-signed round (limit violated) | _Pending_ |
-| Revoke, then the next settlement rejected | _Pending_ |
-| Maximum-size round: 10 members, 30 invoices | _Pending_ |
+Reproduce them with [`contracts/script/Proofs.s.sol`](contracts/script/Proofs.s.sol) and [`MaxRound.s.sol`](contracts/script/MaxRound.s.sol). The two refused rounds are sent once with a fixed gas limit so the refusal has an explorer link; the relayer itself never sends a round that fails simulation.
+
+| Proof | What happened | Transaction |
+|---|---|---|
+| Full-scale round | 15.00 cleared with 2.00 between three shops | [`0xaa8b9794…f054fa`](https://explorer-test.qday.info/tx/0xaa8b97944a9b8cf2c47e216804b149b333e2a8e29c7bb4cfc8012f2881f054fa) |
+| Rejected agent-approved round | The agent approved a round where Ben’s mandate would pay 0.02 to clear 0.03 (1.5×, below its 3.0× minimum). Reverted with `ClearRatioTooLow`; nothing moved | [`0x60a77ad8…b006c7`](https://explorer-test.qday.info/tx/0x60a77ad8652b9ebb35481dbbf125f64250bfa06f45ac78b4a60faaba99b006c7) |
+| Revoke, then rejected | Chidi revoked his mandate gaslessly ([revoke tx](https://explorer-test.qday.info/tx/0xb997e47ad6e43d8f82bf2a3bb26e682a467b6c4cfa54b3796466278449012200)); the next round relying on it reverted with `MandateRevoked` | [`0x3deb06b2…9ea1f3`](https://explorer-test.qday.info/tx/0x3deb06b2d5fb178ebd90549995e617ba8d42c8cd363a39ec6a082937e09ea1f3) |
+| Maximum-size round | 10 members and 30 invoices in one settlement: 0.735 cleared with 0.039, 1.58M gas | [`0xd7d83ec1…1b05c3`](https://explorer-test.qday.info/tx/0xd7d83ec1856f44c66a23fa311beaa44997da18aea59300f94c06ff662f1b05c3) |
+| 1/100-scale demo round | The judge sandbox case: 0.15 cleared with 0.02 | [`0xe8f39165…c1f634`](https://explorer-test.qday.info/tx/0xe8f391653af69c80c308a2341df1185d957a451d15b583ecb9b2676770c1f634) |
 
 ## Testing
 
