@@ -1,14 +1,22 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import type { ReactNode } from "react";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], axes: ["opsz"], display: "swap", variable: "--font-inter" });
 const geistMono = Geist_Mono({ subsets: ["latin"], display: "swap", variable: "--font-geist-mono" });
 
+const description = "Clear what a group of businesses owe each other with the least cash, in one settlement.";
+
 export const metadata: Metadata = {
+  // Makes share-image and canonical URLs absolute.
+  metadataBase: new URL(SITE_URL),
   title: { default: "Salda", template: "%s | Salda" },
-  description: "Clear what a group of businesses owe each other with the least cash, in one settlement.",
+  description,
+  applicationName: "Salda",
+  openGraph: { type: "website", siteName: "Salda", locale: "en_US", url: "/", description },
+  twitter: { card: "summary_large_image", description },
 };
 
 export const viewport: Viewport = {
