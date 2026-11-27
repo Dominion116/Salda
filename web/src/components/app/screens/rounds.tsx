@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
-import { sampleMembers } from "@/client/mock";
 import {
   messageOf,
   nameIn,
@@ -102,15 +101,13 @@ export function NewRoundScreen() {
 
 function Builder({ invoices, limits, nameOf }: { invoices: Invoice[]; limits: CashLimit[]; nameOf: NameOf }) {
   const router = useRouter();
-  const { client, circleId, me } = useSalda();
+  const { circleId, me } = useSalda();
   const labelId = useId();
   const open = invoices.filter(isOpen);
   const owe = open.filter((item) => item.debtor === me).reduce((total, item) => total + leftOf(item), 0n);
   const owed = open.filter((item) => item.creditor === me).reduce((total, item) => total + leftOf(item), 0n);
   // Past this, more cash could not clear any more of what you owe.
-  const useful = owe > owed ? owe - owed : 0n;
-  const locked = client.mode === "sample" && me !== sampleMembers.ada;
-  const max = locked ? 0n : useful;
+  const max = owe > owed ? owe - owed : 0n;
 
   const saved = limits.find((limit) => limit.member === me)?.amount ?? 0n;
   const [cash, setCash] = useState(saved < max ? saved : max);
@@ -147,11 +144,7 @@ function Builder({ invoices, limits, nameOf }: { invoices: Invoice[]; limits: Ca
       <div className="flex min-w-0 flex-col gap-6 xl:col-span-5">
         <Panel heading="h2" title="Cash you can spend">
           {max === 0n ? (
-            <p className="text-body-sm text-ink">
-              {locked && useful > 0n
-                ? "In sample data, only Ada’s Bakery has cash to spend. Choose it under “Viewing as” to try this."
-                : "You are owed at least as much as you owe, so you need no cash."}
-            </p>
+            <p className="text-body-sm text-ink">You are owed at least as much as you owe, so you need no cash.</p>
           ) : (
             <div className="flex flex-col gap-4">
               <span id={labelId} className="sr-only">
@@ -301,8 +294,7 @@ export function RoundScreen() {
 }
 
 function RoundDetail({ round, invoices, nameOf }: { round: Round; invoices: Invoice[]; nameOf: NameOf }) {
-  const { me, client } = useSalda();
-  const sample = client.mode === "sample";
+  const { me } = useSalda();
   const position = round.plan.positions.find((candidate) => candidate.member === me);
   const signed = round.approvedBy.includes(me);
   const ready = round.plan.positions.every((candidate) => round.approvedBy.includes(candidate.member));
@@ -312,7 +304,7 @@ function RoundDetail({ round, invoices, nameOf }: { round: Round; invoices: Invo
 
   const approve = useChange(
     (client) => client.approveRound(round.key, me),
-    sample ? "Consent signed. Sample data, nothing was sent." : "Consent signed. Nothing moves until everyone signs.",
+    "Consent signed. Nothing moves until everyone signs.",
   );
   const settle = useChange(
     (client) => client.settleRound(round.key),
@@ -414,9 +406,9 @@ function RoundDetail({ round, invoices, nameOf }: { round: Round; invoices: Invo
                 </li>
               ))}
             </ul>
-            {waiting && !ready && sample ? (
+            {waiting && !ready ? (
               <p className="pt-3 text-caption text-ink-subtle">
-                Sample data: choose each business under “Viewing as” to sign for it.
+                Send this page’s link to each business that hasn’t signed. They open it with their wallet to sign.
               </p>
             ) : null}
           </Panel>
@@ -534,11 +526,7 @@ export function ReceiptScreen() {
                 <Summary plan={data.plan} nameOf={nameOf} />
               </Panel>
               {invoices.data ? <Lines plan={data.plan} invoices={invoices.data} nameOf={nameOf} /> : null}
-              {data.txHash ? (
-                <TxLink hash={data.txHash} />
-              ) : (
-                <p className="text-body-sm text-ink-subtle">This is a sample round, so there is no transaction to view.</p>
-              )}
+              {data.txHash ? <TxLink hash={data.txHash} /> : null}
             </div>
           </>
         )

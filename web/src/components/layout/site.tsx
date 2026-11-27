@@ -164,11 +164,22 @@ function Rails() {
   );
 }
 
-/** `rails` draws the landing page's two hairline rails; reading pages leave them off. */
-export function SiteLayout({ children, rails = true }: { children: ReactNode; rails?: boolean }) {
+/**
+ * `rails` draws the landing page's two hairline rails; reading pages leave them off. `skipLink` adds the
+ * "Skip to content" link for keyboard users; the landing page leaves it off at the owner's request.
+ */
+export function SiteLayout({
+  children,
+  rails = true,
+  skipLink = true,
+}: {
+  children: ReactNode;
+  rails?: boolean;
+  skipLink?: boolean;
+}) {
   return (
     <>
-      <SkipLink />
+      {skipLink ? <SkipLink /> : null}
       <SiteHeader />
       <div className="relative">
         {rails ? <Rails /> : null}

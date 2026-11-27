@@ -134,7 +134,7 @@ export default function PrivacyPage() {
         <Section id="browser" title="Your browser">
           <P>
             We do not set cookies. Your browser keeps which wallet you last connected, and WalletConnect’s session if you use it,
-            in its own site storage so it can reconnect. You can clear it at any time in your browser’s settings. The app’s
+            in its own site storage so it can reconnect. You can clear it at any time in your browser’s settings. The demo’s
             sample data lives only in the open tab.
           </P>
         </Section>

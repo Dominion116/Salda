@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { sampleMembers } from "@/client/mock";
 import { useChange, useMandate, useSalda } from "@/client/provider";
 import type { Mandate, MandateTerms } from "@/client/types";
 import { AddressText, KeyValues, Loaded, PageHeader } from "@/components/app/parts";
@@ -105,7 +104,7 @@ function ActiveMandate({ mandate }: { mandate: Mandate }) {
 type Errors = Partial<Record<"round" | "total" | "days" | "ratio" | "hours" | "ends", string>>;
 
 function MandateForm() {
-  const { me, circleId, client: current } = useSalda();
+  const { me, circleId } = useSalda();
   const [round, setRound] = useState("2.00");
   const [total, setTotal] = useState("10.00");
   const [days, setDays] = useState("30");
@@ -116,7 +115,7 @@ function MandateForm() {
   const [review, setReview] = useState<MandateTerms | null>(null);
   const activate = useChange(
     (client, terms: MandateTerms) => client.activateMandate(terms),
-    current.mode === "sample" ? "Mandate active. Sample data, nothing was sent." : "Mandate active. You can revoke it at any time.",
+    "Mandate active. You can revoke it at any time.",
   );
 
   const read = (form: HTMLFormElement) => {
@@ -155,7 +154,8 @@ function MandateForm() {
     setReview({
       circleId,
       member: me,
-      agent: sampleMembers.agent,
+      // The live client signs the mandate for this server's agent key, read from /api/agent.
+      agent: "0x0000000000000000000000000000000000000000",
       agentId: 0n,
       maxNetDebitPerRound: roundUnits,
       totalCap: totalUnits,

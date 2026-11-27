@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <SiteLayout>
+    <SiteLayout skipLink={false}>
       <Hero />
       <Problem />
       <Clearing />

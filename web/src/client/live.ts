@@ -253,7 +253,6 @@ export function createLiveClient({
   });
 
   const client: SaldaClient = {
-    mode: "live",
 
     listCircles: () =>
       step(async () => {

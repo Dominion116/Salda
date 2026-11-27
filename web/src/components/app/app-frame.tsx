@@ -2,20 +2,20 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { nameIn, SaldaProvider, useCircle, useInvoices, usePendingInvoices, useRounds, useSalda } from "@/client/provider";
-import type { Address } from "@/client/types";
+import { SaldaProvider, useCircle, useInvoices, usePendingInvoices, useRounds, useSalda } from "@/client/provider";
+import { ConnectGate } from "@/components/app/connect-gate";
 import { AppShell } from "@/components/layout/app-shell";
 import { container, pageY } from "@/components/layout/container";
-import { cx } from "@/lib/cx";
 import { SkipLink } from "@/components/layout/skip-link";
-import { Select } from "@/components/ui/select";
+import { cx } from "@/lib/cx";
 import { WalletProviders } from "@/wallet/providers";
 import { NetworkBanner, WalletButton } from "@/wallet/wallet-button";
 
+/** The app: live data only. Until a wallet is connected on Aevum, it shows the connect screen instead. */
 export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <WalletProviders>
-      <SaldaProvider>
+      <SaldaProvider gate={(reason) => <ConnectGate reason={reason} />}>
         <SkipLink />
         <Frame>{children}</Frame>
       </SaldaProvider>
@@ -29,32 +29,33 @@ export function useNeeds() {
   const { data: invoices = [] } = useInvoices();
   const { data: pending = [] } = usePendingInvoices();
   const { data: rounds = [] } = useRounds();
+  const is = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
   return {
-    toCosign: pending.filter((item) => item.signedBy !== me && (item.debtor === me || item.creditor === me)),
+    toCosign: pending.filter((item) => !is(item.signedBy, me) && (is(item.debtor, me) || is(item.creditor, me))),
     toVoid: invoices.filter(
-      (item) => !item.voided && item.voidSignedBy !== null && item.voidSignedBy !== me && (item.debtor === me || item.creditor === me),
+      (item) =>
+        !item.voided && item.voidSignedBy !== null && !is(item.voidSignedBy, me) && (is(item.debtor, me) || is(item.creditor, me)),
     ),
     toSign: rounds.filter(
       (round) =>
         round.state === "waiting-for-signatures" &&
-        !round.approvedBy.includes(me) &&
-        round.plan.positions.some((position) => position.member === me),
+        !round.approvedBy.some((member) => is(member, me)) &&
+        round.plan.positions.some((position) => is(position.member, me)),
     ),
     toSettle: rounds.filter(
       (round) =>
         round.state === "waiting-for-signatures" &&
-        round.plan.positions.every((position) => round.approvedBy.includes(position.member)),
+        round.plan.positions.every((position) => round.approvedBy.some((member) => is(member, position.member))),
     ),
   };
 }
 
 function Frame({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { client, me, setMe } = useSalda();
+  const { circleId } = useSalda();
   const { data: circle } = useCircle();
   const needs = useNeeds();
-  const nameOf = nameIn(circle);
 
   const item = (href: string, label: string, count?: number) => ({
     href,
@@ -66,8 +67,15 @@ function Frame({ children }: { children: ReactNode }) {
   return (
     <AppShell
       fill
-      mode={client.mode}
-      title={circle ? (circle.name.status === "verified" ? circle.name.value : "Unverified name") : "Loading…"}
+      title={
+        circle
+          ? circle.name.status === "verified"
+            ? circle.name.value
+            : "Unverified name"
+          : circleId === 0n
+            ? "No circle yet"
+            : "Loading…"
+      }
       nav={[
         item("/app", "Home"),
         item("/app/invoices", "Invoices", needs.toCosign.length + needs.toVoid.length),
@@ -79,20 +87,7 @@ function Frame({ children }: { children: ReactNode }) {
       ]}
       secondary={[item("/app/settings", "Settings")]}
       banner={<NetworkBanner />}
-      actions={
-        <>
-          {client.mode === "sample" && circle ? (
-            <Select
-              compact
-              label="Viewing as"
-              value={me}
-              onChange={(event) => setMe(event.currentTarget.value as Address)}
-              options={circle.members.map((member) => ({ value: member.address, label: nameOf(member.address) }))}
-            />
-          ) : null}
-          <WalletButton />
-        </>
-      }
+      actions={<WalletButton />}
     >
       <main id="main" tabIndex={-1} className={cx(container, pageY)}>
         {children}

@@ -171,10 +171,6 @@ function GettingStarted() {
             Open the <A href="/demo">demo</A> and choose <strong className="font-medium">Continue with sample data</strong>. Every
             step works with sample data and nothing touches the network.
           </li>
-          <li>
-            Open the <A href="/app">app</A>. Until a wallet is connected on Aevum it runs on sample data, labelled as such, so you
-            can click through every screen.
-          </li>
         </List>
         <H3 id="with-wallet">With a wallet</H3>
         <P>
@@ -446,7 +442,10 @@ npm install
 cp .env.example .env.local
 npm run dev
 `}</CodeBlock>
-        <P>Without <Code>NEXT_PUBLIC_SALDA_ADDRESS</Code> the app runs on sample data, which is enough to explore every screen.</P>
+        <P>
+          The app uses live data only, so it needs <Code>NEXT_PUBLIC_SALDA_ADDRESS</Code> and a wallet on Aevum. Without them it
+          asks you to connect and points to the demo, which works with sample data and no wallet.
+        </P>
         <H3 id="deploy">Deploy</H3>
         <CodeBlock label="Deploy the contract and set up the demo (from contracts/)">{`
 cp .env.example .env   # set PRIVATE_KEY to a test-only wallet
@@ -653,7 +652,7 @@ POST /api/store
           caption="Environment variables"
           head={["Variable", "Purpose", "Required", "Secret"]}
           rows={[
-            [<Code key="1">NEXT_PUBLIC_SALDA_ADDRESS</Code>, "The deployed contract. Without it, sample data only", "For live data", "No"],
+            [<Code key="1">NEXT_PUBLIC_SALDA_ADDRESS</Code>, "The deployed contract. Without it, the app asks visitors to use the demo", "Yes", "No"],
             [<Code key="2">NEXT_PUBLIC_WC_PROJECT_ID</Code>, "WalletConnect, for phone wallets", "No", "No"],
             [<Code key="3">RELAYER_PRIVATE_KEY</Code>, "Pays every relayed fee; holds the demo’s test tokens", "For live data", "Yes"],
             [<Code key="4">AGENT_PRIVATE_KEY</Code>, "The agent’s approval key. Holds no funds", "For mandates", "Yes"],

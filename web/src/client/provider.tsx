@@ -7,59 +7,52 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { aevum, SALDA } from "@/chain/salda";
 import { useToast } from "@/components/ui/toast";
 import { createLiveClient } from "./live";
-import { createMockClient, SAMPLE_CIRCLE, sampleMembers } from "./mock";
 import { SaldaError, type Address, type Circle, type RoundPlan, type SaldaClient, type Units } from "./types";
 
 type Session = {
   client: SaldaClient;
+  /** 0 when this business is not in any circle yet. */
   circleId: bigint;
   setCircleId: (id: bigint) => void;
-  /** The business whose view this is. With sample data you choose; live, it is the wallet. */
+  /** The connected wallet. */
   me: Address;
-  setMe: (member: Address) => void;
-  resetSample: () => void;
 };
 
 const SessionContext = createContext<Session | null>(null);
-const newSample = () => createMockClient({ latencyMs: 250 });
+
+/** Why the app cannot show live data yet. The app frame shows the matching screen. */
+export type GateReason = "not-deployed" | "connect" | "wrong-network" | "loading";
 
 /**
- * Live data when Salda is deployed and a wallet is connected to Aevum; sample data otherwise, with its label.
- * With live data, "me" is the connected wallet.
+ * The app runs on live data only: SaldaClearing on Aevum, through the connected wallet. Until a wallet is connected
+ * on Aevum and its circles have loaded, it renders `gate` instead of the app. Sample data lives only in /demo.
  */
-export function SaldaProvider({ children }: { children: ReactNode }) {
+export function SaldaProvider({ children, gate }: { children: ReactNode; gate: (reason: GateReason) => ReactNode }) {
   const queries = useQueryClient();
   const { address, chainId, isConnected } = useAccount();
   const { data: wallet } = useWalletClient();
-  const [sample, setSample] = useState(newSample);
-  const [circleId, setCircleId] = useState(SAMPLE_CIRCLE);
-  const [sampleMe, setSampleMe] = useState<Address>(sampleMembers.ada);
+  const [circleId, setCircleId] = useState<bigint | null>(null);
 
-  const live = useMemo(
+  const client = useMemo(
     () =>
       SALDA && isConnected && address && wallet && chainId === aevum.id
         ? createLiveClient({ contract: SALDA, wallet, me: address })
         : null,
     [isConnected, address, wallet, chainId],
   );
-  const client = live ?? sample;
-  const me = live && address ? address : sampleMe;
-  const setMe = useCallback((member: Address) => setSampleMe(member), []);
 
-  // Switching between sample and live data starts fresh, on the first circle this business belongs to.
+  // A new wallet or network starts fresh, on the first circle this business belongs to.
   useEffect(() => {
     queries.removeQueries({ queryKey: ["salda"] });
-    if (!live) {
-      setCircleId(SAMPLE_CIRCLE);
-      return;
-    }
+    setCircleId(null);
+    if (!client) return;
     let cancelled = false;
-    live
+    client
       .listCircles()
       .then((circles) => {
         if (!cancelled) setCircleId(circles[0]?.id ?? 0n);
@@ -70,19 +63,17 @@ export function SaldaProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [live, queries]);
-
-  const resetSample = useCallback(() => {
-    setSample(newSample);
-    setCircleId(SAMPLE_CIRCLE);
-    setSampleMe(sampleMembers.ada);
-    queries.removeQueries({ queryKey: ["salda"] });
-  }, [queries]);
+  }, [client, queries]);
 
   const session = useMemo(
-    () => ({ client, circleId, setCircleId, me, setMe, resetSample }),
-    [client, circleId, me, resetSample],
+    () => (client && address && circleId !== null ? { client, circleId, setCircleId, me: address } : null),
+    [client, address, circleId],
   );
+
+  if (!SALDA) return gate("not-deployed");
+  if (!isConnected) return gate("connect");
+  if (chainId !== aevum.id) return gate("wrong-network");
+  if (!session) return gate("loading");
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
 }
 

@@ -70,7 +70,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3000>. Without a deployed contract configured, the app and demo run on clearly labelled sample data.
+Open <http://localhost:3000>. The landing page and the [/demo](https://salda-nu.vercel.app/demo) work without a wallet; the demo uses clearly labelled sample data unless you connect one. The app at `/app` uses live data only, so it needs `NEXT_PUBLIC_SALDA_ADDRESS` and a wallet on Aevum.
 
 ## How it works
 
@@ -312,7 +312,7 @@ Template: [`web/.env.example`](web/.env.example). Use fresh **test-only** wallet
 
 | Variable | Purpose | Example | Required | Secret |
 |---|---|---|---|---|
-| `NEXT_PUBLIC_SALDA_ADDRESS` | Deployed SaldaClearing; without it the app uses sample data | `0x5A1d…` | For live data | No |
+| `NEXT_PUBLIC_SALDA_ADDRESS` | Deployed SaldaClearing; without it the app asks visitors to use the demo | `0x5A1d…` | Yes | No |
 | `NEXT_PUBLIC_WC_PROJECT_ID` | WalletConnect for phone wallets ([cloud.reown.com](https://cloud.reown.com)) | `3f9c…` | No | No |
 | `RELAYER_PRIVATE_KEY` | Pays relayed gas; holds demo tUSD8 | `0x…` (64 hex) | For live data | **Yes** |
 | `AGENT_PRIVATE_KEY` | Agent approval key; no funds | `0x…` (64 hex) | For mandates | **Yes** |
@@ -414,7 +414,7 @@ npm run build
 
 ## Troubleshooting
 
-**The app shows “Sample data” with my wallet connected.** Switch the wallet to Aevum testnet (chain 44005), and check that `NEXT_PUBLIC_SALDA_ADDRESS` is set for the deployment.
+**The app keeps asking me to connect or switch networks.** Switch the wallet to Aevum testnet (chain 44005), and check that `NEXT_PUBLIC_SALDA_ADDRESS` is set for the deployment.
 
 **“Your wallet already has a network using the same address.”** MetaMask refuses a second network with the same RPC URL. Edit or remove the existing Aevum entry, then connect again.
 

@@ -33,7 +33,7 @@ export function CircleScreen() {
 
 function CircleSwitcher() {
   const { data: circles = [] } = useCircles();
-  const { circleId, setCircleId, me, setMe } = useSalda();
+  const { circleId, setCircleId } = useSalda();
   if (circles.length < 2) return null;
 
   return (
@@ -45,8 +45,6 @@ function CircleSwitcher() {
           const next = circles.find((circle) => `${circle.id}` === event.currentTarget.value);
           if (!next) return;
           setCircleId(next.id);
-          const first = next.members[0];
-          if (first && !next.members.some((member) => member.address === me)) setMe(first.address);
         }}
         options={circles.map((circle) => ({
           value: `${circle.id}`,

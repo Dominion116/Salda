@@ -1,7 +1,6 @@
 /*
- * The one interface every screen reads and writes through (PRD section 6).
- * It mirrors the contract in PRD section 4. mockClient implements it with sample data;
- * a live client replaces that without changing screens.
+ * The one interface every app screen reads and writes through. It mirrors the contract (PRD section 4) and is
+ * implemented by the live client (client/live.ts). Sample data exists only in /demo (lib/demo.ts).
  */
 
 export type Address = `0x${string}`;
@@ -108,7 +107,6 @@ export type SaldaErrorCode =
   | "nothing-to-clear"
   | "mandate-already-active"
   | "not-ready"
-  | "not-supported-in-sample"
   /** A wallet, network or contract refusal. The message says what happened and what to do. */
   | "refused";
 
@@ -122,10 +120,8 @@ export class SaldaError extends Error {
   }
 }
 
+/** Everything the app reads and writes, backed by SaldaClearing on Aevum (client/live.ts). */
 export interface SaldaClient {
-  /** Screens show a Sample data label whenever this is "sample". */
-  readonly mode: "sample" | "live";
-
   listCircles(): Promise<Circle[]>;
   getCircle(id: bigint): Promise<Circle>;
   createCircle(name: string, admin: Address, adminName: string): Promise<Circle>;

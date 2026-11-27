@@ -176,7 +176,6 @@ function NewInvoiceForm({ circle }: { circle: Circle }) {
     "Invoice signed. Now the other business needs to sign it.",
   );
 
-  // Switching "Viewing as" can make the chosen business yourself.
   const chosen = others.find((member) => member.address === other)?.address;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -354,9 +353,7 @@ export function CosignScreen() {
               </div>
               {canSign ? null : (
                 <p className="text-body-sm text-ink-subtle">
-                  {client.mode === "sample"
-                    ? `Sample data: choose ${nameOf(other)} under “Viewing as” to sign for them.`
-                    : `Send this link to ${nameOf(other)}. They open it with their wallet to sign.`}
+                  Send this link to {nameOf(other)}. They open it with their wallet to sign.
                 </p>
               )}
             </div>
@@ -406,7 +403,7 @@ export function InvoiceScreen() {
 }
 
 function InvoiceDetail({ invoice, circle, nameOf }: { invoice: Invoice; circle: Circle | undefined; nameOf: NameOf }) {
-  const { me, client: current } = useSalda();
+  const { me } = useSalda();
   const left = leftOf(invoice);
   const open = isOpen(invoice);
   const party = invoice.debtor === me || invoice.creditor === me;
@@ -415,7 +412,7 @@ function InvoiceDetail({ invoice, circle, nameOf }: { invoice: Invoice; circle: 
   const [error, setError] = useState<string>();
   const pay = useChange(
     (client, amount: bigint) => client.payInvoice(invoice.id, amount),
-    current.mode === "sample" ? "Payment recorded. Sample data, nothing was sent." : "Payment sent to the business you owe.",
+    "Payment sent to the business you owe.",
   );
   const voiding = useChange(
     (client) => client.signVoid(invoice.id, me),

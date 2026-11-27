@@ -44,7 +44,8 @@ export function AppShell({
   nav: readonly AppNavItem[];
   secondary?: readonly AppNavItem[];
   title: ReactNode;
-  mode: "sample" | "live";
+  /** "sample" shows a Sample data badge. Only the design page's layout gallery uses it; the app is live only. */
+  mode?: "sample" | "live";
   actions?: ReactNode;
   banner?: ReactNode;
   /** Takes the full height of the window. */
