@@ -450,8 +450,8 @@ node ../tools/export-abi.mjs out ../web/src/chain/abi.ts
 `}</CodeBlock>
         <P>
           Then add the values from <A href="#environment">Environment variables</A> to <Code>web/.env.local</Code> and to your
-          Vercel project, and deploy <Code>web/</Code>. Aevum has no contract verification on its explorer, so publish the
-          address, constructor arguments and source commit instead.
+          Vercel project, and deploy <Code>web/</Code>. Verify the contract on the Aevum explorer with{" "}
+          <Code>forge verify-contract</Code> and <Code>--verifier blockscout</Code>, as the README shows.
         </P>
         <H3 id="tests">Run the tests</H3>
         <CodeBlock label="Contract and app checks">{`
@@ -669,6 +669,12 @@ POST /api/store
             ["Chain ID", "44005"],
             ["RPC", <Code key="rpc">https://rpc-test.qday.info</Code>],
             ["Explorer", <A key="exp" href="https://explorer-test.qday.info">explorer-test.qday.info</A>],
+            [
+              "SaldaClearing",
+              <A key="salda" href="https://explorer-test.qday.info/address/0x25B0746b1C7DDb7D585855eE03bF7589A14cB5FA?tab=contract">
+                0x25B0746b1C7DDb7D585855eE03bF7589A14cB5FA (verified source)
+              </A>,
+            ],
             ["tUSD8", <Code key="t">0x456569838f1d43009A91ebA4263147Afd7233483</Code>],
             ["Multicall3", <Code key="m">0xcA11bde05977b3631167028862bE2a173976CA11</Code>],
             ["EVM version", "Shanghai"],
@@ -727,7 +733,6 @@ function Trust() {
       <Section id="constraints" title="Known constraints">
         <List>
           <li>Amounts and addresses are public. Amount privacy is on the roadmap, not in this version.</li>
-          <li>The explorer cannot verify contract source, so check the published commit against the deployed address yourself.</li>
           <li>Gasless use depends on the relayer being up. Anyone with tQDAY can submit the same signed round instead.</li>
           <li>Rounds are all or nothing: one missing signature, or one blocked member, stops the whole round.</li>
           <li>With mandates, the solver uses a heuristic step that may miss the very best plan. The contract still enforces every limit.</li>

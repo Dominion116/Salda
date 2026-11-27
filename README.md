@@ -346,7 +346,7 @@ Then set the web variables in Vercel (root directory `web`, framework preset Nex
 
 ### Aevum testnet addresses
 
-The Aevum explorer cannot verify contract source, so the exact deployment is published here instead.
+The source is [verified on the Aevum explorer](https://explorer-test.qday.info/address/0x25B0746b1C7DDb7D585855eE03bF7589A14cB5FA?tab=contract) (Blockscout, standard JSON input). To verify a new deployment: `forge verify-contract <address> src/SaldaClearing.sol:SaldaClearing --chain-id 44005 --verifier blockscout --verifier-url https://explorer-test.qday.info/api/ --constructor-args $(cast abi-encode "constructor(address,address)" <tUSD8> <registry>) --compiler-version v0.8.24`.
 
 | Item | Value |
 |---|---|
@@ -402,7 +402,6 @@ npm run build
 ## Known constraints
 
 - Wallet addresses, who owes whom, and amounts are **public** onchain. Names and documents are salted hashes only.
-- The explorer cannot verify source code; compare the published commit with the deployed address.
 - Gasless use needs the relayer to be up. It is untrusted: anyone with tQDAY can submit the same signatures.
 - Names are only as trustworthy as the circle admin who confirms them.
 - With mandate ratios, the solver uses a heuristic tightening step. It is always feasible but not always optimal; the contract enforces every limit regardless.
