@@ -4,7 +4,7 @@ import { useState } from "react";
 import { nameIn, useChange, useCircle, useCircles, useSalda } from "@/client/provider";
 import type { Address, Circle, Member } from "@/client/types";
 import { AddressText, Loaded, PageHeader } from "@/components/app/parts";
-import { Badge, Panel } from "@/components/ui/data";
+import { Badge, EmptyState, Panel } from "@/components/ui/data";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/format";
 const isAddress = (text: string): text is Address => /^0x[0-9a-fA-F]{40}$/.test(text);
 
 export function CircleScreen() {
+  const { circleId, me } = useSalda();
   const circle = useCircle();
   return (
     <>
@@ -22,10 +23,21 @@ export function CircleScreen() {
         action={<CreateCircle />}
       />
       <div className="flex flex-col gap-6">
-        <CircleSwitcher />
-        <Loaded query={circle} what="your circle">
-          {(data) => <Members circle={data} />}
-        </Loaded>
+        {circleId === 0n ? (
+          <Panel>
+            <EmptyState title="You’re not in a circle yet" action={<AddressText address={me} />}>
+              Create one with “Create a circle” above and add the businesses you trade with. Or send a circle admin your
+              wallet address, below, so they can add you.
+            </EmptyState>
+          </Panel>
+        ) : (
+          <>
+            <CircleSwitcher />
+            <Loaded query={circle} what="your circle">
+              {(data) => <Members circle={data} />}
+            </Loaded>
+          </>
+        )}
       </div>
     </>
   );

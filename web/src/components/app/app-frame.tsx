@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { SaldaProvider, useCircle, useInvoices, usePendingInvoices, useRounds, useSalda } from "@/client/provider";
 import { ConnectGate } from "@/components/app/connect-gate";
+import { NoCircle } from "@/components/app/no-circle";
 import { AppShell } from "@/components/layout/app-shell";
 import { container, pageY } from "@/components/layout/container";
 import { SkipLink } from "@/components/layout/skip-link";
@@ -56,6 +57,8 @@ function Frame({ children }: { children: ReactNode }) {
   const { circleId } = useSalda();
   const { data: circle } = useCircle();
   const needs = useNeeds();
+  // Not in a circle yet: only Circle (to create one) and Settings make sense; everything else explains that.
+  const needsCircle = circleId === 0n && !path.startsWith("/app/circle") && !path.startsWith("/app/settings");
 
   const item = (href: string, label: string, count?: number) => ({
     href,
@@ -90,7 +93,7 @@ function Frame({ children }: { children: ReactNode }) {
       actions={<WalletButton />}
     >
       <main id="main" tabIndex={-1} className={cx(container, pageY)}>
-        {children}
+        {needsCircle ? <NoCircle /> : children}
       </main>
     </AppShell>
   );
